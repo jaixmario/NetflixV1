@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/jpeg" href="https://iili.io/2aL8UUx.md.jpg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETFLIX!!!!</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>NETFLIX!!!!</h1>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <form id="search-form" action="/search" method="GET" onsubmit="cleanInput()">
+            <input
+                type="text"
+                name="q"
+                id="search-input"
+                placeholder="Search for a TV show..."
+                class="search-input"
+                oninput="showSuggestions()"
+                autocomplete="off"
+            />
+            <button type="submit" class="search-button">Search</button>
+        </form>
+        <div id="suggestions" class="suggestions"></div>
+    </div>
+
+    <!-- Show list of all TV shows -->
+    <div class="show-list">
+        {% for show in shows %}
+            <div class="show-card" onclick="checkAccess('{{ show.imdb_id }}')">
+                <img src="{{ show.thumbnail }}" alt="{{ show.name }}">
+                <h3>{{ show.name }}</h3>
+                <p>IMDb Rating: {{ show.rating }}</p>
+                <p>Year: {{ show.year }}</p>
+                {% if show.quality %}
+                <span class="quality-label">{{ show.quality }}</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePopup()">&times;</span>
+            <h2>ENTER ACCESS KEY</h2>
+            <input type="hidden" id="selectedShowId" value="">
+            <input type="text" id="apiKeyInput" placeholder="ENTER YOUR ACCESS KEY ">
+            <div class="button-container">
+                <button id="freeKeyButton" onclick="getFreeKey()">GET FREE KEY</button>
+
+                <button onclick="buyKey()">BUY KEY</button>
+            </div>
+            <button class="submit-button" onclick="validateApiKey()">SUBMIT</button>
+            <p id="apiMessage" class="message"></p>
+        </div>
+    </div>
+    
+    
+    <!-- Success Modal -->
+<div id="successModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSuccessPopup()">&times;</span>
+        <h2 style="color: #4CAF50;">🎉 Success!</h2>
+        <p style="color: var(--text-color); margin: 20px 0;">Key activation successful!</p>
+        <button class="submit-button" onclick="closeSuccessPopup()">Continue Watching</button>
+    </div>
+</div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/?page={{ page - 1 }}" class="page-link">Previous</a>
+        {% endif %}
+
+        {% for p in visible_pages %}
+            {% if p == "..." %}
+            <span class="dots">...</span>
+            {% elif p == page %}
+            <span class="page-link active">{{ p }}</span>
+            {% else %}
+            <a href="/?page={{ p }}" class="page-link">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/?page={{ page + 1 }}" class="page-link">Next</a>
+        {% endif %}
+    </div>
+
+    <script>
+        // Function to check access based on stored API key
+        function checkAccess(showId) {
+            const apiKey = getCookie('apiKey');
+            document.getElementById('selectedShowId').value = showId;
+            if (apiKey) {
+                validateApiKey(apiKey, showId);
+            } else {
+                showPopup();
+            }
+        }
+
+        function showPopup() {
+            document.getElementById('apiKeyModal').style.display = 'block';
+        }
+
+        function closePopup() {
+            document.getElementById('apiKeyModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        // Close modals when clicking outside
+window.onclick = function(event) {
+    const apiKeyModal = document.getElementById('apiKeyModal');
+    const successModal = document.getElementById('successModal');
+
+    if (event.target === apiKeyModal) {
+        closePopup();
+    }
+    if (event.target === successModal) {
+        closeSuccessPopup();
+    }
+};
+
+        // Validate API key function
+        async function validateApiKey(apiKeyFromCookie = null) {
+            const apiKey = apiKeyFromCookie || document.getElementById('apiKeyInput').value;
+            const messageElement = document.getElementById('apiMessage');
+            const showId = document.getElementById('selectedShowId').value;
+
+            if (!apiKey) {
+                messageElement.textContent = "PLEASE ENTER YOUR ACCESS KEY ";
+                messageElement.style.color = "red";
+                return;
+            }
+
+            try {
+                const response = await fetch('/validate-key', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ apiKey })
+                });
+
+                const result = await response.json();
+                messageElement.textContent = result.message;
+                
+                if (response.ok) {
+                    messageElement.style.color = "green";
+                    if (!apiKeyFromCookie) {
+                        setCookie('apiKey', apiKey, 30);
+                    }
+                    setTimeout(() => {
+                        closePopup();
+                        window.location.href = `/show/${showId}`;
+                    }, 500);
+                } else {
+                    messageElement.style.color = "red";
+                    if (apiKeyFromCookie) {
+                        setCookie('apiKey', '', -1);
+                        showPopup();
+                    }
+                }
+            } catch (error) {
+                messageElement.textContent = "An error occurred. Please try again.";
+                messageElement.style.color = "red";
+                console.error(error);
+            }
+        }
+
+        // Cookie management functions
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Search suggestions functionality
+        async function showSuggestions() {
+            const query = document.getElementById("search-input").value.trim().toLowerCase();
+            const suggestionsDiv = document.getElementById("suggestions");
+
+            if (!query) {
+                suggestionsDiv.style.display = "none";
+                return;
+            }
+
+            try {
+                const response = await fetch(`/suggestions?q=${encodeURIComponent(query)}`);
+                const filteredSuggestions = await response.json();
+
+                suggestionsDiv.innerHTML = "";
+                filteredSuggestions.forEach(name => {
+                    const div = document.createElement("div");
+                    div.textContent = name;
+                    div.onclick = () => {
+                        document.getElementById("search-input").value = name;
+                        suggestionsDiv.style.display = "none";
+                        document.getElementById("search-form").submit();
+                    };
+                    suggestionsDiv.appendChild(div);
+                });
+                suggestionsDiv.style.display = "block";
+            } catch (error) {
+                suggestionsDiv.style.display = "none";
+            }
+        }
+
+        // Form validation
+        function cleanInput() {
+            const searchInput = document.getElementById("search-input").value.trim();
+            document.getElementById("search-input").value = searchInput;
+            return !!searchInput;
+        }
+        
+        
+        // Add these functions
+function showSuccessPopup() {
+    document.getElementById('successModal').style.display = 'block';
+}
+
+function closeSuccessPopup() {
+    document.getElementById('successModal').style.display = 'none';
+}
+
+// Modify the existing DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const activationStatus = urlParams.get('activation');
+    
+    if (activationStatus === 'success') {
+        showSuccessPopup();  // Show success modal instead of main modal
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (activationStatus === 'error') {
+        // Existing error handling remains the same
+        document.getElementById('apiMessage').textContent = 'Invalid key. Please try again.';
+        document.getElementById('apiMessage').style.color = 'red';
+        showPopup();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
+        
+        async function getFreeKey() {
+    const freeKeyButton = document.getElementById('freeKeyButton');
+    try {
+        // Disable button immediately
+        freeKeyButton.disabled = true;
+        freeKeyButton.textContent = 'please wait....';
+
+        // Make API request
+        const response = await fetch("/generate", { method: "POST" });
+        const result = await response.json();
+
+        if (result.short_url) {
+            // Redirect to the short URL in current tab
+            window.location.href = result.short_url;
+        } else {
+            alert("Error generating free key. Try again later.");
+        }
+    } catch (error) {
+        alert("An error occurred. Please try again.");
+        console.error(error);
+    } finally {
+        // Only re-enable if redirect failed
+        if (!window.location.href.includes(result?.short_url)) {
+            freeKeyButton.disabled = false;
+            freeKeyButton.textContent = 'GET FREE KEY';
+        }
+    }
+}
+    </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Disclaimer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Merriweather', serif;
+            background: #121212;
+            color: #dcdcdc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            color: #f1c40f;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #f1c40f;
+            padding-bottom: 8px;
+        }
+
+        .warning {
+            background: #222;
+            padding: 20px;
+            border-left: 4px solid #e74c3c;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .warning strong {
+            color: #e74c3c;
+            font-weight: 700;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+
+        ul li {
+            margin: 8px 0;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        ul li::before {
+            content: "■";
+            position: absolute;
+            left: 0;
+            color: #f1c40f;
+            font-size: 14px;
+        }
+
+        a {
+            color: #f1c40f;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s ease-in-out;
+        }
+
+        a:hover {
+            color: #e74c3c;
+        }
+
+        .contact {
+            margin-top: 25px;
+            font-size: 14px;
+            text-align: center;
+            color: #aaa;
+        }
+
+        .contact p {
+            margin: 5px 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Content Disclaimer</h1>
+
+        <div class="warning">
+            <strong>Important Notice:</strong>
+            <ul>
+                <li>All content provided on this platform is publicly available on the internet.</li>
+                <li>We do not host, upload, or control any files on our servers.</li>
+                <li>All links provided are sourced from third-party websites.</li>
+            </ul>
+        </div>
+
+        <h2 style="color: #f1c40f; font-size: 20px; margin-bottom: 10px;">Copyright Concerns</h2>
+        <p>If you believe any content on this website infringes upon your copyright:</p>
+        <ul>
+            <li>Contact us immediately at <a href="mailto:update-4wny@protonmail.com">update-4wny@protonmail.com</a>.</li>
+            <li>Provide detailed information about the copyrighted material.</li>
+            <li>Upon verification, the content will be removed within 48 hours.</li>
+        </ul>
+
+        <div class="contact">
+            <p>Last Updated: 10-02-2025</p>
+        </div>
+    </div>
+
+</body>
+</html>

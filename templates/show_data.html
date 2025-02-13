@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetched Data</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        img {
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        img:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Fetched Data: {{ data.name }}</h1>
+
+    <div class="container card p-4 shadow-sm">
+        <!-- Display Data -->
+        <div class="row">
+            <div class="col-md-4">
+                <img src="{{ data.thumbnail }}" alt="Thumbnail" class="img-fluid mb-3">
+            </div>
+            <div class="col-md-8">
+                <p><strong>IMDb ID:</strong> {{ data.imdb_id }}</p>
+                <p><strong>Rating:</strong> {{ data.rating }}</p>
+                <p><strong>Description:</strong> {{ data.description }}</p>
+                <p><strong>Year:</strong> {{ data.year }}</p>
+                <p><strong>Genres:</strong> {{ data.genres }}</p>
+                <p><strong>Trailer:</strong> <a href="{{ data.trailer }}" target="_blank">Watch Trailer</a></p>
+            </div>
+        </div>
+
+        <!-- Button to trigger advanced edit modal -->
+        <button type="button" class="btn btn-secondary mt-4" data-bs-toggle="modal" data-bs-target="#advancedEditModal">
+            Show Advanced Edit
+        </button>
+
+        <!-- Advanced Edit Modal -->
+        <div class="modal fade" id="advancedEditModal" tabindex="-1" aria-labelledby="advancedEditModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="advancedEditModalLabel">Advanced Edit</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="updateForm">
+                            <div class="mb-3">
+                                <label for="thumbnail" class="form-label">Thumbnail:</label>
+                                <input type="text" id="thumbnail" name="thumbnail" class="form-control" value="{{ data.thumbnail }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name:</label>
+                                <input type="text" id="name" name="name" class="form-control" value="{{ data.name }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Rating:</label>
+                                <input type="text" id="rating" name="rating" class="form-control" value="{{ data.rating }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description:</label>
+                                <textarea id="description" name="description" class="form-control">{{ data.description }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="year" class="form-label">Year:</label>
+                                <input type="text" id="year" name="year" class="form-control" value="{{ data.year }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="genres" class="form-label">Genres:</label>
+                                <input type="text" id="genres" name="genres" class="form-control" value="{{ data.genres }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="quality" class="form-label">Quality:</label>
+                                <select id="quality" name="quality" class="form-select">
+                                    <option value="1080p" {% if data.quality == '1080p' %}selected{% endif %}>1080p</option>
+                                    <option value="720p" {% if data.quality == '720p' %}selected{% endif %}>720p</option>
+                                    <option value="480p" {% if data.quality == '480p' %}selected{% endif %}>480p</option>
+                                </select>
+                            </div>
+
+                            <!-- Episode Editing Section for TV Shows -->
+                            {% if data.type == 'tv' %}
+                                <h2 class="mt-5">Edit Episodes</h2>
+                                {% for season in data.seasons %}
+                                    <h3>Season {{ season.season_number }}</h3>
+                                    {% for episode in season.episodes %}
+                                        <div class="card mb-4">
+                                            <div class="card-header">
+                                                {{ 'S{:02d}E{:02d}'.format(season.season_number, episode.episode_number) }}
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="episode_name_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
+                                                        Episode Name for "{{ episode.name }}":
+                                                    </label>
+                                                    <input type="text" 
+                                                           id="episode_name_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           name="episode_name_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           class="form-control" 
+                                                           value="{{ episode.name }}">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="episode_thumbnail_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
+                                                        Episode Thumbnail:
+                                                    </label>
+                                                    <input type="text" 
+                                                           id="episode_thumbnail_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           name="episode_thumbnail_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           class="form-control" 
+                                                           value="{{ episode.thumbnail }}">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="episode_description_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
+                                                        Episode Description:
+                                                    </label>
+                                                    <textarea 
+                                                           id="episode_description_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           name="episode_description_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           class="form-control">{{ episode.description }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="episode_air_date_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
+                                                        Episode Air Date:
+                                                    </label>
+                                                    <input type="text" 
+                                                           id="episode_air_date_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           name="episode_air_date_{{ season.season_number }}_{{ loop.index0 }}" 
+                                                           class="form-control" 
+                                                           value="{{ episode.air_date }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+
+                            <button type="button" id="saveButton" class="btn btn-primary">Save Changes</button>
+                        </form>
+                        <div id="message" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add FileId Section -->
+        <h2 class="mt-5">Add FileId</h2>
+        <form action="/add_file_ids" method="POST">
+            {% if data.type == 'movie' %}
+                <div class="mb-3">
+                    <label for="file_id" class="form-label">Enter FileId for Movie:</label>
+                    <input type="text" id="file_id" name="file_id" class="form-control" required>
+                </div>
+            {% elif data.type == 'tv' %}
+                <!-- Bulk FileId Input -->
+                <div class="mb-3">
+                    <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
+                    <textarea id="bulkFileIds" class="form-control mb-3" placeholder="Example: 01ZDEC6CX2RDOEWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, 01ZDEC6CVYR3IIFB5T7JCKY7FYQNIQKSKB, ..."></textarea>
+                    <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">Auto-fill Episodes</button>
+                </div>
+
+                <!-- Existing per-episode inputs (add class="episode-file-id") -->
+                {% for season in data.seasons %}
+                    <h3>Season {{ season.season_number }}</h3>
+                    {% for episode in season.episodes %}
+                        <div class="mb-3">
+                            <label for="file_id_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
+                                FileId for Episode "{{ episode.name }}":
+                            </label>
+                            <input type="text" 
+                                   id="file_id_{{ season.season_number }}_{{ loop.index0 }}" 
+                                   name="file_id_{{ season.season_number }}_{{ loop.index0 }}" 
+                                   class="form-control episode-file-id">
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            {% endif %}
+            <button type="submit" id="saveFileIdsButton" class="btn btn-primary">Save FileIds</button>
+        </form>
+    </div>
+
+    <!-- Bootstrap and jQuery (for AJAX) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+$(document).ready(function() {
+    // Function to save changes
+    function saveChanges(callback) {
+        $.ajax({
+            url: '/update_temp',
+            type: 'POST',
+            data: $('#updateForm').serialize(),
+            success: function(response) {
+                $('#message').html('<div class="alert alert-success">' + response.message + '</div>');
+                // Hide success message after a few seconds
+                setTimeout(function() {
+                    $('#message .alert').fadeOut();
+                }, 3000);
+                if (callback) callback(); // Proceed to the next step if provided
+            },
+            error: function() {
+                $('#message').html('<div class="alert alert-danger">Failed to save data.</div>');
+            }
+        });
+    }
+
+    // Save Changes button
+    $('#saveButton').click(function() {
+        saveChanges();
+    });
+
+    // Save FileIds button
+    $('#saveFileIdsButton').click(function(event) {
+        event.preventDefault(); // Prevent the form from submitting immediately
+        saveChanges(function() {
+            // After saving changes, proceed with file ID submission
+            $('#saveFileIdsButton').closest('form').submit();
+        });
+    });
+});
+
+// New function for bulk file ID filling
+function fillEpisodeFileIds() {
+    const bulkInput = document.getElementById('bulkFileIds').value;
+    const fileIds = bulkInput.split(',').map(id => id.trim());
+    const inputs = document.querySelectorAll('.episode-file-id');
+    
+    inputs.forEach((input, index) => {
+        input.value = index < fileIds.length ? fileIds[index] : '';
+    });
+}
+    </script>
+</body>
+</html>

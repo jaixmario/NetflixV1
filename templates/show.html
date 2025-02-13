@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/jpeg" href="https://iili.io/2aL8UUx.md.jpg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ show.name }}</title>
+    <style>
+        /* Dark Theme CSS */
+        :root {
+            --background-color: #1c1c1c;
+            --card-background: #2a2a2a;
+            --text-color: #f0f0f0;
+            --border-color: #444444;
+            --highlight-color: #4CAF50;
+            --secondary-highlight-color: #d2691e;
+            --box-shadow-color: rgba(0, 0, 0, 0.4);
+            --font-primary: 'Poppins', sans-serif;
+            --font-secondary: 'Roboto', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-secondary);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            font-family: var(--font-primary);
+            color: var(--secondary-highlight-color);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+
+        .show-banner {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px var(--box-shadow-color);
+            display: block;
+            margin: 20px auto;
+        }
+
+        .show-details {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .show-details p {
+            margin: 5px 0;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        h2 {
+            font-family: var(--font-primary);
+            color: var(--secondary-highlight-color);
+            margin: 30px 0 15px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .seasons-list {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .episode-card {
+            display: flex;
+            align-items: center;
+            background: #222;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            box-shadow: 0 4px 8px var(--box-shadow-color);
+            transition: transform 0.2s;
+        }
+
+        .episode-card:hover {
+            transform: scale(1.02);
+        }
+
+        .episode-thumbnail {
+            width: 100px;
+            height: auto;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+
+        .episode-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centers horizontally */
+    justify-content: center; /* Centers vertically if necessary */
+    text-align: center; /* Centers the text */
+}
+
+.episode-number {
+    font-size: 14px; /* Slightly larger font for S1 E1 */
+    font-weight: bold;
+    color: #888; /* Dim color for S1 E1 */
+    text-transform: uppercase; /* Make S1 E1 distinct */
+    line-height: 1.2; /* Control space between S1 E1 and the next line */
+}
+
+.episode-name {
+    font-size: 18px; /* Larger font for Episode name */
+    font-weight: 600;
+    color: #f0f0f0; /* Bright white for contrast */
+    line-height: 1.2; /* Slightly smaller line height to keep them close */
+}
+
+        .info-button {
+            background: #444;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .info-button:hover {
+            background: #555;
+        }
+
+        .get-link-button {
+            background: #ff5050;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .get-link-button:hover {
+            background: #ff7373;
+            transform: translateY(-2px);
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            color: #fff;
+            background-color: var(--highlight-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            text-align: center;
+        }
+
+        .back-button:hover {
+            background-color: var(--secondary-highlight-color);
+        }
+
+       /* Blur effect for background */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent black */
+    backdrop-filter: blur(8px); /* Adds the blur effect */
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    overflow: hidden; /* Prevent scrolling when modal is open */
+}
+
+/* Modal content styling */
+.modal-content {
+    position: relative;
+    background-color: var(--card-background);
+    padding: 30px 40px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    color: var(--text-color);
+    box-shadow: 0 8px 24px var(--box-shadow-color);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Cross button to close modal */
+.close-cross {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close-cross:hover {
+    color: var(--secondary-highlight-color);
+}
+
+/* Title styling */
+#linkTitle {
+    font-family: var(--font-primary);
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #e0e0e0;
+}
+
+/* Input box for the link */
+.link-input {
+    width: 100%;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 16px;
+    margin: 20px 0;
+    text-align: center;
+    word-break: break-word;
+    outline: none;
+}
+
+/* Button container for Copy Link and Download */
+.button-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+/* Half-width buttons for Copy Link and Download */
+.copy-button, .download-button {
+    width: 48%; /* Each takes half the row */
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Copy button styling */
+.copy-button {
+    background-color: #28a745; /* Green */
+    color: #fff;
+}
+
+.copy-button:hover {
+    background-color: #218838; /* Darker green */
+}
+
+/* Download button styling */
+.download-button {
+    background-color: #ffc107; /* Yellow */
+    color: #000; /* Black text for contrast */
+}
+
+.download-button:hover {
+    background-color: #e0a800; /* Darker yellow */
+}
+
+/* Full-row Steam Beta button */
+#steamBetaButton {
+    display: block; /* Ensures it takes the full row */
+    width: 100%;
+    margin-top: 20px; /* Adds spacing between this and other buttons */
+    background-color: #007bff; /* Blue */
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#steamBetaButton:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+/* Fade-in animation for modal */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.close-modal1 {
+            background-color: var(--highlight-color);
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .close-modal1:hover {
+            background-color: var(--secondary-highlight-color);
+        }
+        
+#fileSize {
+    font-size: 20px; /* Large font for visibility */
+    color: #ffffff; /* Subtle orange for emphasis */
+    font-weight: bold; /* Bold text for importance */
+    text-align: center; /* Center align the text */
+    margin-top: 15px; /* Space above */
+    padding: 10px; /* Padding for spacing */
+    background: #2a2a2a; /* Dark neutral background for contrast */
+    border: 1px solid #444; /* Clean border for separation */
+    border-radius: 5px; /* Slightly rounded corners for a modern feel */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); /* Subtle shadow for depth */
+}
+    </style>
+</head>
+<body>
+    <h1>{{ show.name }}</h1>
+
+    <img class="show-banner" src="{{ show.thumbnail }}" alt="{{ show.name }}">
+
+    <div class="show-details">
+        <p>{{ show.description }}</p>
+        <p>IMDb Rating: <strong>{{ show.rating }}</strong></p>
+
+        {% if show.type == 'movie' and show.file_id %}
+        <button class="get-link-button" onclick="getLink('{{ show.file_id }}', 'Movie', '{{ show.name }}')">Get Link</button>
+        {% endif %}
+    </div>
+
+    {% if show.type == 'tv' %}
+    <h2>Seasons</h2>
+    <div class="seasons-list">
+        {% for season in show.seasons %}
+        <h3>Season {{ season.season_number }} ({{ season.episode_count }} Episodes)</h3>
+        {% for episode in season.episodes %}
+        <div class="episode-card">
+            <img src="{{ episode.thumbnail }}" alt="Episode Thumbnail" class="episode-thumbnail">
+            <div class="episode-info">
+                <span class="episode-number">S{{ season.season_number }} E{{ episode.episode_number }}</span>
+                <span class="episode-name">{{ episode.name }}</span>
+            </div>
+            <button class="info-button" onclick="showDescription('{{ episode.description | replace('\n', ' ') | replace("'", "\\'") }}')">
+        <i>i</i>
+            </button>
+            <button class="get-link-button" onclick="getLink('{{ episode.file_id }}', 'S{{ season.season_number }} E{{ episode.episode_number }}', '{{ episode.name }}')">Get Link</button>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <a href="/" class="back-button">Back to Listings</a>
+
+    <div id="linkModal" class="modal">
+    <div class="modal-content">
+        <!-- Cross button for closing -->
+        <button class="close-cross" onclick="closeLinkModal()">&times;</button>
+        
+        <h2 id="linkTitle">Link Generated!</h2>
+        <p>NOTE: Streaming option is under beta. Use VLC for better experience.</p>
+        <input type="text" id="linkText" class="link-input" readonly>
+        <p id="fileSize" style="font-size: 16px; margin-top: 10px;">Fetching file size...</p>
+        <a id="generatedLink" href="#" target="_blank" style="display: none;"></a>
+
+        <!-- Copy, Download, and Steam Beta Buttons -->
+        <button id="copyButton" class="close-modal copy-button" onclick="copyLink()">COPY LINK </button>
+        <button class="close-modal download-button" onclick="downloadFile()">DOWNLOAD </button>
+        <button id="steamBetaButton" class="close-modal" onclick="openSteamBeta()">STREAM (BETA V1)</button>
+    </div>
+</div>
+
+    <div id="descriptionModal" class="modal">
+        <div class="modal-content">
+            <p id="episodeDescription"></p>
+            <button class="close-modal1" onclick="closeModal()">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        function getLink(file_id, episodeNumber, episodeName) {
+    // Reset file size display immediately
+    document.getElementById("fileSize").textContent = "Fetching file size...";
+
+    fetch(`/get_onedrive_link/${file_id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.link) {
+                const downloadUrl = `${data.link}?download=1`;
+                document.getElementById("linkText").value = downloadUrl;
+                document.getElementById("generatedLink").href = downloadUrl;
+
+                // Update link title
+                document.getElementById("linkTitle").innerHTML = `
+                    <span class="static-text">Link Generated for </span>
+                    <span class="highlight">${episodeNumber} - ${episodeName}</span>
+                    <span class="emphasis">!!</span>
+                `;
+
+                // Fetch file size
+                fetch(`/get_file_metadata/${file_id}`)
+                    .then(metadataResponse => metadataResponse.json())
+                    .then(metadata => {
+                        if (metadata.file_size) {
+                            const formattedSize = formatFileSize(metadata.file_size);
+                            document.getElementById("fileSize").textContent = `SIZE: ${formattedSize}`;
+                        } else {
+                            document.getElementById("fileSize").textContent = "SIZE: Unknown";
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById("fileSize").textContent = "SIZE: Error fetching size";
+                    });
+
+                document.getElementById("linkModal").style.display = "flex";
+            } else {
+                alert("Error: Could not retrieve OneDrive link.");
+            }
+        })
+        .catch(error => alert("An error occurred while fetching the link."));
+}
+
+function formatFileSize(bytes) {
+    const units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    let unitIndex = 0;
+
+    while (bytes >= 1024 && unitIndex < units.length - 1) {
+        bytes /= 1024;
+        unitIndex++;
+    }
+
+    return `${bytes.toFixed(2)} ${units[unitIndex]}`;
+}
+
+            function copyLink() {
+        const linkText = document.getElementById("linkText");
+        const copyButton = document.querySelector(".close-modal.copy-button");
+
+        linkText.select();
+        linkText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard.writeText(linkText.value)
+            .then(() => {
+                // Change button text to "Copied!!"
+                copyButton.textContent = "COPIED!!";
+
+                // Change it back to "COPY LINK" after 3 seconds
+                setTimeout(() => {
+                    copyButton.textContent = "COPY LINK ";
+                }, 3000);
+            })
+            .catch(err => {
+                alert("Failed to copy link: " + err);
+            });
+    }
+
+        function downloadFile() {
+            const linkText = document.getElementById("linkText").value;
+            const anchor = document.createElement("a");
+            anchor.href = linkText;
+            anchor.download = "";
+            anchor.click();
+        }
+
+        function closeLinkModal() {
+            document.getElementById("linkModal").style.display = "none";
+        }
+
+        function showDescription(description) {
+            document.getElementById("episodeDescription").textContent = description;
+            document.getElementById("descriptionModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("descriptionModal").style.display = "none";
+        }
+        
+        function openSteamBeta() {
+    const linkText = document.getElementById("linkText").value;
+
+    if (linkText) {
+        // Generate the Steam Beta URL
+        const steamBetaUrl = `https://niosjai.github.io/Player/?url=${encodeURIComponent(linkText)}`;
+
+        // Open the Steam Beta URL in a new tab
+        window.open(steamBetaUrl, '_blank');
+    } else {
+        alert("No link generated. Please generate a link first.");
+    }
+}
+
+// Close the modal when clicking outside the modal content
+window.onclick = function (event) {
+    const modal = document.getElementById('linkModal');
+    if (event.target === modal) {
+        closeLinkModal();
+    }
+};
+
+function closeLinkModal() {
+    document.getElementById("linkModal").style.display = "none";
+}
+    </script>
+</body>
+</html>
