@@ -1,0 +1,14 @@
+{
+    "type": "movie",
+    "imdb_id": "tt7286456-720p",
+    "name": "Joker madar chod",
+    "thumbnail": "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
+    "rating": "8.142",
+    "description": "During the 1980s, a failed stand-up comedian is driven insane and turns to a life of crime and chaos in Gotham City while becoming an infamous psychopathic crime figure.",
+    "year": "2019",
+    "genres": [
+        "['Crime', 'Thriller', 'Drama']"
+    ],
+    "trailer": "https://www.youtube.com/watch?v=-RFFRxcoKfA",
+    "quality": "720p"
+}

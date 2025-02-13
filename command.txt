@@ -1,0 +1,2 @@
+# Create and initialize database
+sqlite3 data.db < db.sql

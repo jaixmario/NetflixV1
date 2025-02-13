@@ -1,0 +1,1287 @@
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file, flash, make_response, abort
+import requests
+import json
+import os
+import sqlite3
+from datetime import datetime
+import time
+import threading
+import string
+import random
+from contextlib import closing
+
+app = Flask(__name__)
+app.secret_key = '0d23caaa3479b02511e1af24744'  # Needed for session handling
+
+TMDB_API_KEY = '0d23caaa3479b02511e1af2047fb4744'
+BASE_URL = 'https://api.themoviedb.org/3'
+
+DATABASE = 'data.db'
+
+# Replace these with your Azure AD application details
+CLIENT_ID = '59790544-ca0c-4b77-b338-26ff9d1b676f'
+TENANT_ID = '0fd666e8-0b3d-41ea-a5ef-1c509130bd94'
+DEVICE_CODE_URL = f'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/devicecode'
+TOKEN_URL = f'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token'
+SCOPES = "openid profile email offline_access https://graph.microsoft.com/.default"
+# Predefined password and username for your API
+MY_PASSWORD = 'mypassword'
+MY_USERNAME = 'main-sever'
+BASE_API_URL = "https://severv1.onrender.com"
+GP_API_KEY = "96dc76c9be123d120f32a9b624c7682c14dae03e"
+KEY_API_URL = "https://severv1.onrender.com/mypassword/main_sever1/free/"
+TEMP_PAGES_FILE = "temp_pages.json"
+temp_pages_lock = threading.Lock()
+
+def get_db():
+    return sqlite3.connect(DATABASE)
+
+def query_db(query, args=(), one=False):
+    with closing(get_db()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, args)
+        rv = [dict((cursor.description[idx][0], value)
+                   for idx, value in enumerate(row)) for row in cursor.fetchall()]
+        return (rv[0] if rv else None) if one else rv
+
+def insert_db(query, args=()):
+    with closing(get_db()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, args)
+        conn.commit()
+        return cursor.lastrowid
+
+def login_required(func):
+    def wrapper(*args, **kwargs):
+        api_key = request.cookies.get('apiKey')
+        if not api_key:
+            return redirect(url_for('index'))  # No key at all
+
+        is_valid, error_message = validate_api_key(api_key)
+        if not is_valid:
+            response = make_response(redirect(url_for('index')))
+            response.delete_cookie('apiKey')  # Remove expired key
+            return response  # Redirect to login
+        
+        return func(*args, **kwargs)
+
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+def login_required(func):
+    def wrapper(*args, **kwargs):
+        api_key = request.cookies.get('apiKey')
+        if not api_key:
+            return redirect(url_for('index'))  # No key at all
+
+        is_valid, error_message = validate_api_key(api_key)
+        if not is_valid:
+            response = make_response(redirect(url_for('index')))
+            response.delete_cookie('apiKey')  # Remove expired key
+            return response  # Redirect to login
+        
+        return func(*args, **kwargs)
+
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+@app.route('/get_file_metadata/<file_id>', methods=['GET'])
+@login_required
+def get_file_metadata(file_id):
+    try:
+        # Get a valid access token
+        access_token = get_valid_token()
+
+        # Fetch file metadata from Microsoft Graph API
+        url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            metadata = response.json()
+            # Extract file size (in bytes)
+            file_size = metadata.get('size', 0)
+            return jsonify({"file_size": file_size}), 200
+        else:
+            return jsonify({"error": "Failed to fetch file metadata"}), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/toggle_lockdown', methods=['POST'])
+def toggle_lockdown():
+    if 'admin_logged_in' not in session:
+        return jsonify({"message": "Unauthorized access"}), 403
+
+    with open('lockdown.json', 'r') as f:
+        lockdown_data = json.load(f)
+
+    # Toggle the state
+    lockdown_data['lockdown'] = 'off' if lockdown_data['lockdown'] == 'on' else 'on'
+
+    # Save the updated state
+    with open('lockdown.json', 'w') as f:
+        json.dump(lockdown_data, f, indent=4)
+
+    return jsonify({"message": "Lockdown state updated", "lockdown": lockdown_data['lockdown']})
+    
+@app.route('/lockdown_status', methods=['GET'])
+def lockdown_status():
+    with open('lockdown.json', 'r') as f:
+        lockdown_data = json.load(f)
+    return jsonify({"lockdown": lockdown_data['lockdown']})
+    
+@app.route('/lockdown')
+def lockdown():
+    # Check the current lockdown state
+    with open('lockdown.json', 'r') as f:
+        lockdown_data = json.load(f)
+
+    # If lockdown is off, redirect to home page
+    if lockdown_data.get("lockdown") == "off":
+        return redirect(url_for('index'))
+
+    # Render the lockdown page if lockdown is on
+    return render_template('lockdown.html')
+   
+@app.before_request
+def check_lockdown():
+    # Skip lockdown for specific routes
+    if request.path in ['/toggle_lockdown', '/lockdown', '/admin', '/admin/home']:
+        return
+
+    # Read lockdown status
+    with open('lockdown.json', 'r') as f:
+        lockdown_data = json.load(f)
+
+    if lockdown_data.get("lockdown") == "on":
+        return redirect(url_for('lockdown'))
+
+
+@app.route('/warning')
+def warning():
+    return render_template('warning.html')
+
+@app.route('/upload_name', methods=['POST'])
+def upload_name():
+    if 'admin_logged_in' in session:
+        # Check if the uploaded file is present
+        if 'name_file' not in request.files:
+            flash("No file uploaded", "error")
+            return redirect(url_for('home'))
+        
+        file = request.files['name_file']
+
+        # Ensure the uploaded file is named 'name.json'
+        if file.filename != 'name.json':
+            flash("Please upload a file named name.json", "error")
+            return redirect(url_for('home'))
+
+        # Define the path to save name.json
+        file_path = os.path.join(app.root_path, 'name.json')
+
+        # If name.json already exists, remove it
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # Save the new file
+        file.save(file_path)
+        flash("name.json uploaded successfully", "success")
+        
+        return redirect(url_for('home'))
+    else:
+        return redirect(url_for('admin_login'))
+
+@app.route('/suggestions', methods=['GET'])
+def suggestions():
+    query = request.args.get('q', '').lower()
+    if not query:
+        return jsonify([])
+
+    results = query_db("""
+        SELECT name FROM shows 
+        WHERE LOWER(name) LIKE ?
+        LIMIT 5
+    """, (f"%{query}%",))
+
+    return jsonify([result['name'] for result in results])
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+# Route to validate the API key and save it in a cookie
+def validate_api_key(api_key):
+    """Validate API key format first, then check with external API."""
+    
+    # List of valid prefixes
+    valid_prefixes = [
+        "CUSTOMxJAIxMARIOx",
+        "1MONTHxJAIxMARIOx",
+        "7DAYxJAIxMARIOx",
+        "1DAYxJAIxMARIOx",
+        "FREExJAIxMARIOx",
+        "1HOURxJAIxMARIOx"
+    ]
+
+    # Check if the key starts with a valid prefix
+    if not any(api_key.startswith(prefix) for prefix in valid_prefixes):
+        return False, "KEY IS INVALID"
+
+    # Proceed with external API validation
+    user_ip = request.remote_addr
+    if request.headers.get('X-Forwarded-For'):
+        user_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    
+    api_url = f"{BASE_API_URL}/{MY_PASSWORD}/{MY_USERNAME}/check/{api_key}/{user_ip}"
+    
+    try:
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            return True, None  # Key is valid
+        else:
+            return False, response.json().get('message', 'Unknown error')
+    except requests.RequestException:
+        return False, "VALIDATION SERVICE UNAVAILABLE"
+
+@app.route('/validate-key', methods=['POST'])
+def validate_key():
+    data = request.json
+    user_api_key = data.get('apiKey')
+
+    if not user_api_key:
+        return jsonify({'message': 'API key is required'}), 400
+
+    is_valid, error_message = validate_api_key(user_api_key)
+    if is_valid:
+        response = make_response(jsonify({'message': 'ACCESS GRANTED!'}), 200)
+        response.set_cookie('apiKey', user_api_key, max_age=60*60*24*30)
+        return response
+    else:
+        # Use the error message from API
+        return jsonify({'message': error_message or 'Key validation failed'}), 401
+
+@app.route('/replace_backup', methods=['POST'])
+def replace_backup():
+    try:
+        access_token = get_valid_token()  # Ensure you have a valid access token
+        headers = {"Authorization": f"Bearer {access_token}"}
+        folder_id = "01ZDEC6CXCKCNDJGM7X5EK33GFMY6DW5TL"
+
+        # Step 1: Get the list of files in the backup folder
+        response = requests.get(f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children", headers=headers)
+        if response.status_code != 200:
+            print("Error: Failed to retrieve backup files", response.status_code, response.text)
+            return jsonify({"message": "Failed to retrieve backup files."}), 500
+        
+        files = response.json().get('value', [])
+        if not files:
+            print("Error: No files found in the backup folder.")
+            return jsonify({"message": "No files found in the backup folder."}), 404
+
+        # Step 2: Sort files by last modified date, select the latest
+        files = sorted(files, key=lambda x: x['lastModifiedDateTime'], reverse=True)
+        latest_file = files[0]
+        file_id = latest_file['id']
+        print(f"Latest file ID: {file_id}, Name: {latest_file['name']}")
+
+        # Step 3: Delete old data.db if it exists
+        if os.path.exists('data.db'):
+            os.remove('data.db')
+
+        # Step 4: Download the latest backup file
+        download_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
+        download_response = requests.get(download_url, headers=headers)
+        if download_response.status_code == 200:
+            with open('data.db', 'wb') as f:
+                f.write(download_response.content)
+            print("Backup successfully replaced with the latest version.")
+            return jsonify({"message": "Backup successfully replaced with latest version."})
+        else:
+            print("Error: Failed to download the latest backup.", download_response.status_code, download_response.text)
+            return jsonify({"message": "Failed to download the latest backup."}), 500
+    except Exception as e:
+        print("Exception occurred:", e)
+        return jsonify({"message": "An error occurred during the replacement process."}), 500
+
+UPLOAD_INTERVAL = 3600
+
+def upload_to_onedrive():
+    """Uploads data.db to the OneDrive backup folder with a timestamp every 10 minutes."""
+    while True:
+        time.sleep(UPLOAD_INTERVAL)
+
+        # Fetch a valid access token
+        access_token = get_valid_token()
+        if not access_token:
+            print("Error: Unable to get a valid access token.")
+            continue
+        
+        # Set OneDrive upload URL for the backup folder
+        backup_folder = '01ZDEC6CXCKCNDJGM7X5EK33GFMY6DW5TL'  # Replace with actual OneDrive folder ID
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"data{timestamp}.db"
+
+        upload_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{backup_folder}:/{filename}:/content"
+
+        # Read the data from data.db
+        with open('data.db', 'rb') as file_data:
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            response = requests.put(upload_url, headers=headers, data=file_data)
+
+        if response.status_code == 201:
+            print(f"{filename} uploaded successfully.")
+        else:
+            print(f"Error uploading {filename}: {response.status_code} - {response.text}")
+
+# Start the upload thread
+upload_thread = threading.Thread(target=upload_to_onedrive, daemon=True)
+upload_thread.start()
+
+@app.route('/update_temp', methods=['POST'])
+def update_temp():
+    if 'admin_logged_in' in session:
+        # Load temp.json data
+        with open('temp.json', 'r') as f:
+            data = json.load(f)
+        
+        # Update basic data
+        data['thumbnail'] = request.form['thumbnail']
+        data['name'] = request.form['name']
+        data['rating'] = request.form['rating']
+        data['description'] = request.form['description']
+        data['year'] = request.form['year']
+        data['genres'] = request.form.getlist('genres')
+        
+        # Store selected quality separately and update IMDb ID
+        selected_quality = request.form.get('quality')
+        data['quality'] = selected_quality
+        data['imdb_id'] = f"{data['imdb_id'].split('-')[0]}-{selected_quality}"  # Append quality to IMDb ID
+
+        # Update episode details if type is TV
+        if data['type'] == 'tv':
+            for season in data['seasons']:
+                for i, episode in enumerate(season['episodes']):
+                    # Update episode name
+                    episode_name = request.form.get(f'episode_name_{season["season_number"]}_{i}')
+                    if episode_name:
+                        episode['name'] = episode_name
+                    
+                    # Update episode thumbnail
+                    episode_thumbnail = request.form.get(f'episode_thumbnail_{season["season_number"]}_{i}')
+                    if episode_thumbnail:
+                        episode['thumbnail'] = episode_thumbnail
+                    
+                    # Update episode description
+                    episode_description = request.form.get(f'episode_description_{season["season_number"]}_{i}')
+                    if episode_description:
+                        episode['description'] = episode_description
+                    
+                    # Update episode air date
+                    episode_air_date = request.form.get(f'episode_air_date_{season["season_number"]}_{i}')
+                    if episode_air_date:
+                        episode['air_date'] = episode_air_date
+
+        # Save updated data back to temp.json
+        with open('temp.json', 'w') as f:
+            json.dump(data, f, indent=4)
+        
+        # Save the movie or TV name in name.json
+        new_name_entry = {'name': data['name']}
+        try:
+            with open('name.json', 'r') as name_file:
+                existing_names = json.load(name_file)
+        except FileNotFoundError:
+            existing_names = []
+
+        # Prevent duplicates
+        if not any(entry['name'] == data['name'] for entry in existing_names):
+            existing_names.append(new_name_entry)
+        
+        with open('name.json', 'w') as name_file:
+            json.dump(existing_names, name_file, indent=4)
+
+        return jsonify({"message": "Data updated successfully in temp.json and name.json"})
+    else:
+        return jsonify({"message": "Unauthorized access"}), 401
+
+
+@app.route('/upload_data', methods=['POST'])
+def upload_data():
+    if 'admin_logged_in' in session:
+        # Check if the uploaded file is present
+        if 'data_file' not in request.files:
+            flash("No file uploaded", "error")
+            return redirect(url_for('home'))
+        
+        file = request.files['data_file']
+
+        # Ensure the uploaded file is named 'data.db'
+        if file.filename != 'data.db':
+            flash("Please upload a file named data.db", "error")
+            return redirect(url_for('home'))
+
+        # Define the path to save data.db
+        file_path = os.path.join(app.root_path, 'data.db')
+
+        # If data.db already exists, remove it
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # Save the new file
+        file.save(file_path)
+        flash("data.db uploaded successfully", "success")
+        
+        return redirect(url_for('home'))
+    else:
+        return redirect(url_for('admin_login'))
+
+@app.route('/upload_user_token', methods=['POST'])
+def upload_user_token():
+    if 'admin_logged_in' in session:
+        # Check if the uploaded file is present
+        if 'user_token' not in request.files:
+            flash("No file uploaded", "error")
+            return redirect(url_for('home'))
+        
+        file = request.files['user_token']
+
+        # Ensure the uploaded file is named 'data.json'
+        if file.filename != 'user_token.json':
+            flash("Please upload a file named data.json", "error")
+            return redirect(url_for('home'))
+
+        # Define the path to save data.json
+        file_path = os.path.join(app.root_path, 'user_token.json')
+
+        # If data.json already exists, remove it
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # Save the new file
+        file.save(file_path)
+        flash("user_token.json uploaded successfully", "success")
+        
+        return redirect(url_for('home'))
+    else:
+        return redirect(url_for('admin_login'))
+
+@app.route('/key/<key>')
+def validate_key_via_url(key):
+    # First check the key format
+    if not key.startswith("FREExJAIxMARIOx"):
+        abort(404)
+    
+    # Then validate the key
+    is_valid, _ = validate_api_key(key)
+    
+    if is_valid:
+        response = make_response(redirect(url_for('index', activation='success')))
+        response.set_cookie('apiKey', key, max_age=60*60*24*30)
+        return response
+    else:
+        abort(404)
+        
+@app.route('/download_data')
+def download_data():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+        
+    return send_file('data.db', as_attachment=True)
+
+@app.route('/name_data')
+def name_data():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+        
+    return send_file('name.json', as_attachment=True)
+
+@app.route('/get_token')
+def get_token():
+    # Step 1: Request a device code
+    payload = {
+        'client_id': CLIENT_ID,
+        'scope': SCOPES
+    }
+    response = requests.post(DEVICE_CODE_URL, data=payload)
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to get device code"}), 400
+    
+    device_code_data = response.json()
+    
+    # Step 2: Show the user where to log in and the device code
+    print(f"Go to {device_code_data['verification_uri']} and enter the code: {device_code_data['user_code']}")
+    
+    # Step 3: Poll for the token
+    token_data = poll_for_token(device_code_data['device_code'])
+    
+    if 'access_token' in token_data:
+        with open('user_token.json', 'w') as token_file:
+            json.dump(token_data, token_file)
+        return jsonify({"message": "Token acquired successfully"})
+    else:
+        return jsonify({"error": "Failed to acquire token"}), 400
+
+def poll_for_token(device_code):
+    payload = {
+        'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
+        'client_id': CLIENT_ID,
+        'device_code': device_code,
+        'scope': SCOPES
+    }
+
+    while True:
+        time.sleep(5)
+        response = requests.post(TOKEN_URL, data=payload)
+        token_data = response.json()
+        
+        if 'access_token' in token_data:
+            # Calculate the expiration time
+            token_data['expires_at'] = int(time.time()) + token_data.get('expires_in', 0)
+            
+            # Ensure refresh_token is present
+            if 'refresh_token' in token_data:
+                with open('user_token.json', 'w') as token_file:
+                    json.dump(token_data, token_file)
+            else:
+                print("Warning: No refresh token received!")
+            
+            return token_data
+        elif token_data.get("error") == "authorization_pending":
+            continue
+        else:
+            return token_data
+
+def refresh_access_token():
+    with open('user_token.json') as f:
+        token_data = json.load(f)
+    
+    refresh_token = token_data.get('refresh_token')
+    if not refresh_token:
+        raise Exception("No refresh token available.")
+
+    payload = {
+        'grant_type': 'refresh_token',
+        'client_id': CLIENT_ID,
+        'scope': SCOPES,
+        'refresh_token': refresh_token
+    }
+
+    response = requests.post(TOKEN_URL, data=payload)
+    new_token_data = response.json()
+
+    if 'access_token' in new_token_data:
+        # Update the new expiration time
+        new_token_data['expires_at'] = int(time.time()) + new_token_data.get('expires_in', 0)
+        
+        # Save the updated token data
+        with open('user_token.json', 'w') as token_file:
+            json.dump(new_token_data, token_file)
+
+        return new_token_data['access_token']
+    else:
+        raise Exception("Failed to refresh access token")
+
+def get_valid_token():
+    with open('user_token.json') as f:
+        token_data = json.load(f)
+    
+    if token_data['expires_at'] < int(time.time()) + 120:
+        # Check for refresh token availability
+        if 'refresh_token' not in token_data:
+            print("No refresh token available. Prompting user to re-authenticate.")
+            # Trigger re-authentication if needed
+            return redirect(url_for('get_token'))
+        
+        # Refresh the token if possible
+        payload = {
+            'grant_type': 'refresh_token',
+            'client_id': CLIENT_ID,
+            'scope': SCOPES,
+            'refresh_token': token_data['refresh_token']
+        }
+        response = requests.post(TOKEN_URL, data=payload)
+        new_token_data = response.json()
+        
+        if 'access_token' in new_token_data:
+            # Update expiration and save
+            new_token_data['expires_at'] = int(time.time()) + new_token_data.get('expires_in', 0)
+            with open('user_token.json', 'w') as token_file:
+                json.dump(new_token_data, token_file)
+            return new_token_data['access_token']
+        else:
+            print("Failed to refresh token. Prompting user to re-authenticate.")
+            return redirect(url_for('get_token'))
+    else:
+        return token_data['access_token']
+
+def get_existing_link(file_id, access_token):
+    """Fetch existing shareable link if it exists."""
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/permissions"
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        data = response.json()
+        for permission in data.get('value', []):
+            if permission.get('link', {}).get('type') == 'view':
+                return permission['link']['webUrl']
+    return None
+
+def get_onedrive_business_link(file_id, retry_count=3):
+    try:
+        # Attempt to retrieve a valid token
+        access_token = get_valid_token()
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        create_link_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/createLink"
+        body = {
+            "type": "view",
+            "scope": "anonymous"
+        }
+
+        for attempt in range(retry_count):
+            # Try to create a new link
+            response = requests.post(create_link_url, headers=headers, json=body)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data['link']['webUrl']
+
+            # If creation failed, try fetching an existing link
+            existing_link = get_existing_link(file_id, access_token)
+            if existing_link:
+                return existing_link
+
+            # Optional: wait before retrying (useful if API is throttling)
+            time.sleep(2)
+
+        # If all attempts fail, return None
+        return None
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+@app.route('/get_onedrive_link/<file_id>')
+@login_required
+def get_onedrive_link(file_id):
+    link = get_onedrive_business_link(file_id)
+    if link:
+        return jsonify({"link": link})
+    else:
+        return jsonify({"error": "Unable to generate OneDrive link"}), 400
+
+
+def fetch_data_from_tmdb(imdb_id):
+    url = f'{BASE_URL}/find/{imdb_id}?api_key={TMDB_API_KEY}&external_source=imdb_id'
+    response = requests.get(url)
+    if response.status_code != 200:
+        return None
+
+    data = response.json()
+    movie_results = data.get('movie_results', [])
+    tv_results = data.get('tv_results', [])
+
+    if movie_results:
+        tmdb_id = movie_results[0]['id']
+        return fetch_movie_data(tmdb_id)
+    elif tv_results:
+        tmdb_id = tv_results[0]['id']
+        return fetch_tv_data(tmdb_id)
+    else:
+        return None
+
+def fetch_movie_data(tmdb_id):
+    url = f'{BASE_URL}/movie/{tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=videos'
+    response = requests.get(url)
+    if response.status_code != 200:
+        return None
+
+    data = response.json()
+    return {
+        'type': 'movie',
+        'imdb_id': data.get('imdb_id'),
+        'name': data.get('title'),
+        'thumbnail': f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}",
+        'rating': data.get('vote_average'),
+        'description': data.get('overview'),
+        'year': data.get('release_date', '').split('-')[0],
+        'genres': [genre['name'] for genre in data.get('genres', [])],
+        'trailer': get_trailer(data)
+    }
+
+def fetch_tv_data(tmdb_id):
+    url = f'{BASE_URL}/tv/{tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=videos,external_ids'
+    response = requests.get(url)
+    data = response.json()
+
+    seasons = []
+    for season in data.get('seasons', []):
+        if season.get('season_number') != 0:
+            season_data = {
+                'season_number': season.get('season_number'),
+                'episode_count': season.get('episode_count'),
+                'episodes': fetch_episodes(tmdb_id, season.get('season_number'))
+            }
+            seasons.append(season_data)
+
+    return {
+        'type': 'tv',
+        'imdb_id': data.get('external_ids', {}).get('imdb_id'),
+        'name': data.get('name'),
+        'thumbnail': f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}",
+        'rating': data.get('vote_average'),
+        'description': data.get('overview'),
+        'year': data.get('first_air_date', '').split('-')[0],
+        'genres': [genre['name'] for genre in data.get('genres', [])],
+        'trailer': get_trailer(data),
+        'seasons': seasons
+    }
+
+def fetch_episodes(tmdb_id, season_number):
+    url = f'{BASE_URL}/tv/{tmdb_id}/season/{season_number}?api_key={TMDB_API_KEY}'
+    response = requests.get(url)
+    if response.status_code != 200:
+        return []
+
+    data = response.json()
+    episodes = []
+    for episode in data.get('episodes', []):
+        episodes.append({
+            'name': episode.get('name'),
+            'description': episode.get('overview'),
+            'thumbnail': f"https://image.tmdb.org/t/p/w500{episode.get('still_path')}" if episode.get('still_path') else None,
+            'rating': episode.get('vote_average'),
+            'air_date': episode.get('air_date'),
+            'episode_number': episode.get('episode_number'),
+            'file_id': None
+        })
+    return episodes
+
+def get_trailer(data):
+    videos = data.get('videos', {}).get('results', [])
+    for video in videos:
+        if video['type'] == 'Trailer' and video['site'] == 'YouTube':
+            return f"https://www.youtube.com/watch?v={video['key']}"
+    return None
+
+@app.route('/')
+def index():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Get total shows count
+    total_shows = query_db("SELECT COUNT(*) AS count FROM shows", one=True)['count']
+    total_pages = (total_shows + per_page - 1) // per_page
+
+    if page < 1 or page > total_pages:
+        abort(404)
+
+    # Get paginated shows
+    shows = query_db("""
+        SELECT * FROM shows 
+        ORDER BY date_added DESC 
+        LIMIT ? OFFSET ?
+    """, (per_page, offset))
+
+    # Add genres to each show
+    for show in shows:
+        show['genres'] = [g['genre'] for g in 
+                         query_db("SELECT genre FROM genres WHERE show_id=?", (show['id'],))]
+
+    # Pagination display logic (same as before)
+    visible_pages = []
+    if total_pages <= 5:
+        visible_pages = list(range(1, total_pages + 1))
+    else:
+        visible_pages.append(1)
+        if page > 3:
+            visible_pages.append("...")
+        middle_start = max(2, page - 1)
+        middle_end = min(total_pages - 1, page + 1)
+        visible_pages.extend(range(middle_start, middle_end + 1))
+        if page < total_pages - 2:
+            visible_pages.append("...")
+        visible_pages.append(total_pages)
+
+    return render_template(
+        'index.html',
+        shows=shows,
+        page=page,
+        total_pages=total_pages,
+        visible_pages=visible_pages
+    )
+
+    # Optionally sort the shows so new ones appear at the top (based on date added or year
+
+# Show details route
+@app.route('/show/<string:imdb_id>', defaults={'quality': None})
+@app.route('/show/<string:imdb_id>/<string:quality>')
+@login_required
+def show(imdb_id, quality):
+    show_data = query_db("""
+        SELECT * FROM shows 
+        WHERE imdb_id = ?
+    """, (imdb_id,), one=True)
+
+    if not show_data:
+        abort(404)
+
+    # Get genres
+    show_data['genres'] = [g['genre'] for g in 
+                          query_db("SELECT genre FROM genres WHERE show_id=?", (show_data['id'],))]
+
+    # Get seasons and episodes if it's a TV show
+    if show_data['type'] == 'tv':
+        seasons = query_db("""
+            SELECT * FROM seasons 
+            WHERE show_id = ?
+            ORDER BY season_number
+        """, (show_data['id'],))
+        
+        for season in seasons:
+            season['episodes'] = query_db("""
+                SELECT * FROM episodes 
+                WHERE season_id = ?
+                ORDER BY episode_number
+            """, (season['id'],))
+        
+        show_data['seasons'] = seasons
+
+    return render_template('show.html', show=show_data, quality=quality)
+
+# Admin login route
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        entered_name = request.form['name']
+        entered_email = request.form['email']
+        entered_password = request.form['password']
+
+        # Read stored credentials from admin.json
+        admins = read_admin_credentials()
+
+        # Check if the entered credentials match any admin
+        for admin in admins:
+            if (entered_name == admin['name'] and 
+                entered_email == admin['email'] and 
+                entered_password == admin['password']):
+                # If credentials match, set session and allow access to admin dashboard
+                session['admin_logged_in'] = True
+                return redirect(url_for('home'))
+
+        # If no match found, show error message
+        return render_template('admin_login.html', error="Invalid credentials. Please try again.")
+
+    # If the user is already logged in, redirect to admin home
+    if 'admin_logged_in' in session:
+        return redirect(url_for('home'))
+
+    # Show login page if GET request
+    return render_template('admin_login.html')
+
+def read_admin_credentials():
+    # Read admin.json file
+    if os.path.exists('admin.json'):
+        with open('admin.json', 'r') as f:
+            return json.load(f)
+    return []
+
+# Admin dashboard (protected route)
+@app.route('/admin/home')
+def home():
+    if 'admin_logged_in' in session:
+        return render_template('admin_dashboard.html')  # Render admin dashboard after login
+    else:
+        return redirect(url_for('admin_login'))
+
+# Fetch data by IMDb ID (protected route)
+@app.route('/fetch', methods=['POST'])
+def fetch_data():
+    if 'admin_logged_in' in session:
+        imdb_id = request.form['imdb_id']
+        data = fetch_data_from_tmdb(imdb_id)
+
+        if data:
+            # Store fetched data temporarily in temp.json for further operations
+            with open('temp.json', 'w') as f:
+                json.dump(data, f, indent=4)
+            return render_template('show_data.html', data=data)
+        else:
+            return render_template('admin_dashboard.html', error="No data found for the given IMDb ID.")
+    else:
+        return redirect(url_for('admin_login'))
+
+# Add File IDs for movies or episodes and save to data.json (protected route)
+@app.route('/add_file_ids', methods=['POST'])
+def add_file_ids():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+
+    with open('temp.json', 'r') as f:
+        data = json.load(f)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        # Get quality from temp data
+        quality = data.get('quality', '1080p')
+        
+        # Get file ID based on media type
+        file_id = None
+        if data['type'] == 'movie':
+            file_id = request.form.get('file_id', '').strip()
+        elif data['type'] == 'tv':
+            file_id = None  # Not used for TV shows
+
+        # Insert main show data
+        cursor.execute("""
+            INSERT INTO shows (
+                imdb_id, type, name, thumbnail, rating,
+                description, year, trailer, file_id, quality
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data['imdb_id'],
+            data['type'],
+            data['name'],
+            data['thumbnail'],
+            data['rating'],
+            data['description'],
+            data['year'],
+            data.get('trailer'),
+            file_id,  # For movies
+            quality
+        ))
+        show_id = cursor.lastrowid
+
+        # Insert genres
+        for genre in data['genres']:
+            cursor.execute("INSERT INTO genres (show_id, genre) VALUES (?, ?)", 
+                         (show_id, genre))
+
+        # Handle TV show episodes
+        if data['type'] == 'tv':
+            for season in data['seasons']:
+                cursor.execute("""
+                    INSERT INTO seasons (show_id, season_number, episode_count)
+                    VALUES (?, ?, ?)
+                """, (show_id, season['season_number'], season['episode_count']))
+                season_id = cursor.lastrowid
+
+                for ep_idx, episode in enumerate(season['episodes']):
+                    form_field = f'file_id_{season["season_number"]}_{ep_idx}'
+                    episode_file_id = request.form.get(form_field, '').strip()
+                    
+                    cursor.execute("""
+                        INSERT INTO episodes (
+                            season_id, episode_number, name,
+                            description, thumbnail, rating,
+                            air_date, file_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        season_id,
+                        episode['episode_number'],
+                        episode.get('name'),
+                        episode.get('description'),
+                        episode.get('thumbnail'),
+                        episode.get('rating'),
+                        episode.get('air_date'),
+                        episode_file_id
+                    ))
+
+        conn.commit()
+        flash("Data saved successfully!", "success")
+    except sqlite3.Error as e:
+        conn.rollback()
+        flash(f"Database error: {str(e)}", "error")
+    except Exception as e:
+        flash(f"Error: {str(e)}", "error")
+    finally:
+        conn.close()
+
+    return redirect(url_for('home'))
+        
+@app.route('/send_email', methods=['POST'])
+def send_email():
+    try:
+        # Get the valid access token
+        access_token = get_valid_token()
+        
+        # Extract data from the JSON request
+        data = request.get_json()
+        recipient_email = data.get('recipient', 'N/A')  # Extract recipient's email
+        subject = data.get('subject', 'N/A')  # Extract subject
+        body = data.get('body', '')  # Extract body content
+
+        # Parse body fields
+        parsed_fields = {field.split(":")[0].strip(): field.split(":")[1].strip() for field in body.split("\n") if ":" in field}
+
+        # Extract individual fields with fallback to "N/A"
+        email_type = parsed_fields.get("Type", "N/A")
+        name = parsed_fields.get("Name", "N/A")
+        year = parsed_fields.get("Year", "N/A")
+        comments = parsed_fields.get("Comments", "N/A")
+        
+        # Fixed recipient for email delivery
+        recipient = "Mario22623@gmail.com"  
+
+        if not subject or not body or not recipient_email:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        # Build the HTML email content
+        email_body = f"""
+<html>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f3f4f6; padding: 20px;">
+            <tr>
+                <td align="center">
+                    <!-- Main Email Container -->
+                    <table width="600px" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); padding: 20px; max-width: 600px; width: 100%; border: 1px solid #e0e0e0;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0;">
+                                <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">{subject}</h1>
+                            </td>
+                        </tr>
+                        <!-- Content Section -->
+                        <tr>
+                            <td style="padding: 20px 0;">
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <!-- Type -->
+                                    <tr>
+                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
+                                            <strong>Type:</strong> {email_type}
+                                        </td>
+                                    </tr>
+                                    <!-- Name -->
+                                    <tr>
+                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
+                                            <strong>Name:</strong> {name}
+                                        </td>
+                                    </tr>
+                                    <!-- Year -->
+                                    <tr>
+                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
+                                            <strong>Year:</strong> {year}
+                                        </td>
+                                    </tr>
+                                    <!-- Email -->
+                                    <tr>
+                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
+                                            <strong>Email:</strong> {recipient_email}
+                                        </td>
+                                    </tr>
+                                    <!-- Comment -->
+                                    <tr>
+                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
+                                            <strong>Comment:</strong> {comments}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                                <p style="margin: 5px 0;">&copy; 2024 MARIO. All rights reserved.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>
+        """
+
+        # Set up the Microsoft Graph API endpoint
+        url = "https://graph.microsoft.com/v1.0/me/sendMail"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        email_data = {
+            "message": {
+                "subject": subject,
+                "body": {"contentType": "HTML", "content": email_body},
+                "toRecipients": [{"emailAddress": {"address": recipient}}],
+            },
+            "saveToSentItems": "true",
+        }
+
+        # Send the email via a POST request
+        response = requests.post(url, headers=headers, json=email_data)
+        if response.status_code == 202:
+            return jsonify({"message": "Email sent successfully!"}), 200
+        else:
+            print(f"Failed to send email: {response.status_code} - {response.text}")
+            return jsonify({"error": "Failed to send email"}), 400
+    except Exception as e:
+        print("Exception occurred:", e)
+        return jsonify({"error": "An error occurred while sending the email"}), 500
+# Admin logout route
+@app.route('/admin/logout')
+def admin_logout():
+    # Log out the admin and clear the session
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin_login'))
+
+@app.route('/search')
+def enhanced_search():
+    try:
+        # Get and sanitize search query
+        raw_query = request.args.get('q', '').strip()
+        clean_query = ' '.join(raw_query.split()).replace('+', ' ')  # Handle URL encoding
+        search_term = f"%{clean_query.lower()}%"
+        
+        if not clean_query:
+            return redirect(url_for('index'))
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Verify database schema first
+        cursor.execute("PRAGMA table_info(shows)")
+        columns = [col[1] for col in cursor.fetchall()]
+        required_columns = {'quality', 'name', 'imdb_id', 'type'}
+        if not required_columns.issubset(columns):
+            raise ValueError("Database missing required columns")
+
+        # New optimized query with EXPLICIT column list
+        cursor.execute("""
+            SELECT 
+                s.id,
+                s.imdb_id,
+                s.type,
+                s.name,
+                s.thumbnail,
+                s.rating,
+                s.description,
+                s.year,
+                s.quality,
+                COALESCE(GROUP_CONCAT(g.genre), '') AS genres
+            FROM shows s
+            LEFT JOIN genres g ON s.id = g.show_id
+            WHERE LOWER(s.name) LIKE ?
+            GROUP BY s.id
+            ORDER BY s.date_added DESC
+        """, (search_term,))
+
+        # Safe result processing
+        shows = []
+        for row in cursor.fetchall():
+            show = {
+                'id': row[0],
+                'imdb_id': row[1],
+                'type': row[2],
+                'name': row[3],
+                'thumbnail': row[4],
+                'rating': row[5],
+                'description': row[6],
+                'year': row[7],
+                'quality': row[8],
+                'genres': row[9].split(',') if row[9] else []
+            }
+            shows.append(show)
+
+        return render_template('search_results.html',
+                             shows=shows,
+                             query=clean_query)
+
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error in search: {str(e)}")
+        return "Search service unavailable. Try again later.", 503
+    except ValueError as e:
+        app.logger.critical(f"Database schema mismatch: {str(e)}")
+        return "Configuration error. Contact support.", 500
+    except Exception as e:
+        app.logger.error(f"Unexpected search error: {str(e)}")
+        return "An unexpected error occurred.", 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def load_temp_pages():
+    """Load temp pages from JSON file."""
+    if os.path.exists(TEMP_PAGES_FILE):
+        with open(TEMP_PAGES_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_temp_pages(temp_pages):
+    """Save temp pages to JSON file."""
+    with open(TEMP_PAGES_FILE, "w") as f:
+        json.dump(temp_pages, f, indent=4)
+
+def generate_random_path():
+    """Generate a random string for the temporary URL."""
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+def delete_expired_pages():
+    """Delete expired pages from JSON file periodically."""
+    while True:
+        try:
+            with temp_pages_lock:
+                temp_pages = load_temp_pages()
+                current_time = time.time()
+                temp_pages = {k: v for k, v in temp_pages.items() if current_time <= v["expiry"]}
+
+                save_temp_pages(temp_pages)
+                print(f"Cleanup complete. Active temp pages: {len(temp_pages)}")
+        except Exception as e:
+            print(f"Error in cleanup thread: {e}")
+        
+        time.sleep(60)  # Check every minute
+
+# Start the cleanup thread
+threading.Thread(target=delete_expired_pages, daemon=True).start()
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    response = requests.get(KEY_API_URL)
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to fetch key"}), 500
+
+    key_data = response.json()
+    key = key_data.get("key", "No Key Found")
+
+    temp_path = generate_random_path()
+    expiry_time = time.time() + 600  # 10 minutes from now
+
+    with temp_pages_lock:
+        temp_pages = load_temp_pages()
+        temp_pages[temp_path] = {"key": key, "expiry": expiry_time}
+        save_temp_pages(temp_pages)
+
+    temp_url = f"https://netflix-gqje.onrender.com/{temp_path}"
+
+    gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
+    gp_response = requests.get(gp_link_api)
+    short_url = gp_response.json().get("shortenedUrl", temp_url) if gp_response.status_code == 200 else temp_url
+
+    return jsonify({"temp_url": temp_url, "short_url": short_url})
+    
+@app.route("/<temp_id>")
+def temp_page(temp_id):
+    """Display the temporary page if it exists and is not expired."""
+    with temp_pages_lock:
+        temp_pages = load_temp_pages()
+        temp_data = temp_pages.get(temp_id)
+
+        if not temp_data or time.time() > temp_data["expiry"]:
+            return render_template("404.html"), 404  # Return 404 for expired pages
+
+    return render_template("temp_page.html", key=temp_data["key"])
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
