@@ -196,8 +196,9 @@ def suggestions():
     if not query:
         return jsonify([])
 
+    # Use DISTINCT to eliminate duplicate names
     results = query_db("""
-        SELECT name FROM shows 
+        SELECT DISTINCT name FROM shows 
         WHERE LOWER(name) LIKE ?
         LIMIT 5
     """, (f"%{query}%",))
