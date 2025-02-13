@@ -1,0 +1,799 @@
+/* Modern Dark Theme */
+:root {
+    --background-color: #1b1b1b;
+    --card-background: #2a2a2a;
+    --text-color: #e8e8e8;
+    --border-color: #444444;
+    --highlight-color: #FF0000;
+    --box-shadow-color: rgba(255, 255, 255, 0.1);
+    --modern-font-color: #ffffff; /* White font for modern dark theme */
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h3, a {
+    font-family: 'Poppins', sans-serif;
+    text-align: center;
+    margin: 20px 0;
+    color: var(--modern-font-color);
+    text-decoration: none;
+}
+
+button {
+    margin: 20px;
+    padding: 10px 20px;
+    background-color: transparent;
+    color: var(--highlight-color);
+    border: 2px solid var(--highlight-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: var(--highlight-color);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+/* Modern Search Bar */
+.search-container {
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Align input and button vertically */
+    margin-bottom: 20px;
+    gap: 10px; /* Space between input and button */
+}
+
+.search-input {
+    flex: 1; /* Allow the search input to grow with screen size */
+    max-width: 300px; /* Maximum width for larger screens */
+    padding: 10px;
+    border-radius: 30px;
+    border: 2px solid var(--border-color);
+    background-color: var(--card-background);
+    color: var(--text-color);
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px var(--box-shadow-color);
+    font-size: 14px;
+}
+
+.search-input:focus {
+    border-color: var(--highlight-color);
+    box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3); /* Highlight shadow */
+}
+
+.search-button {
+    padding: 10px 20px;
+    border-radius: 30px;
+    background-color: var(--highlight-color);
+    border: none;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-size: 14px; /* Match font size with input */
+}
+
+.search-button:hover {
+    background-color: #FF0000;  /* Slightly lighter highlight on hover */
+    transform: scale(1.05);  /* Slight pop effect */
+}
+
+/* Show List and Cards */
+.show-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.show-card {
+    width: calc(50% - 20px);
+    text-align: center;
+    border: 2px solid var(--border-color);
+    border-bottom: 4px solid var(--highlight-color);
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    box-shadow: 0 2px 4px var(--box-shadow-color);
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.show-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px);
+}
+
+.show-card img {
+    width: 100%;
+    height: auto;
+    border-bottom: 4px solid var(--highlight-color);
+}
+
+.show-card h3 {
+    font-size: 20px;
+    margin: 15px 0;
+    font-family: 'Poppins', sans-serif;
+    color: var(--modern-font-color);
+    text-decoration: none;
+}
+
+/* Modern Style for Rating and Year */
+.show-card .rating-year {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Roboto', sans-serif;
+    margin: 10px 0;
+    padding: 5px 10px;
+    font-size: 14px;
+    border-radius: 10px;
+    background-color: var(--card-background);
+    color: var(--modern-font-color);
+    border: 2px solid var(--border-color);
+}
+
+.show-card .rating {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    color: var(--highlight-color);
+}
+
+.show-card .year {
+    font-weight: normal;
+    color: var(--text-color);
+}
+
+.show-card p {
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+/* Divider for Modern Look */
+.divider {
+    width: 100%;
+    height: 2px;
+    background-color: var(--highlight-color);
+    margin: 20px 0;
+}
+.show-card {
+    position: relative;
+    /* Other styling for your show-card */
+}
+
+.quality-label {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: yellow;
+    color: black;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+/* 4 cards per row for tablets */
+@media (min-width: 768px) {
+    .show-card {
+        width: calc(25% - 20px);
+    }
+}
+
+/* 6 cards per row for desktops */
+@media (min-width: 1024px) {
+    .show-card {
+        width: calc(16.66% - 20px);
+    }
+}
+
+/* Container for the 404 and "No Results" message */
+.no-results-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    color: #ffffff;
+}
+
+/* "No results found" text styles */
+.no-results h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.no-results p {
+    font-size: 1.1rem;
+    color: #aaaaaa;
+}
+
+/* Modern 404 Design */
+.modern-404 {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.four-zero-four {
+    display: flex;
+    justify-content: center;
+    font-size: 10vw;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Adding margin to span elements for spacing */
+.four-zero-four span {
+    margin: 0 10px; /* Adjust margin to create space between numbers */
+    padding: 0 10px;
+    background: linear-gradient(45deg, #FF0000, #ff7a5f);
+    border-radius: 10px;
+    animation: bounce 2s infinite ease-in-out;
+}
+
+/* Bounce Animation for numbers */
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .four-zero-four {
+        font-size: 15vw; /* Responsive for smaller screens */
+    }
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    text-align: center;
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+}
+
+.modal-content {
+    background-color: #1e1e1e;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 350px;
+    text-align: center;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+    position: relative;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #ff4d4d;
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    color: #fff;
+    font-weight: bold;
+}
+
+.modal-content input {
+    width: calc(100% - 20px);
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #2a2a2a;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.modal-content input:focus {
+    border-color: #007BFF;
+    box-shadow: 0 0 5px #007BFF;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.button-container button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.button-container button:first-child {
+    background-color: #28a745; /* Green for "GET FREE KEY" */
+    color: #fff;
+}
+
+.button-container button:nth-child(2) {
+    background-color: #ffc107; /* Yellow for "BUY KEY" */
+    color: #000;
+}
+
+.button-container button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.submit-button {
+    width: 100%; /* Ensures full width of the container */
+    display: block; /* Ensures it doesn't align with other elements */
+    padding: 12px;
+    background-color: #007BFF; /* Blue for "SUBMIT" */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    margin: 0; /* Removes any extra margin */
+    text-align: center; /* Ensures text alignment */
+    box-sizing: border-box; /* Prevents overflow due to padding */
+}
+
+.submit-button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.submit-button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.message {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #ff4d4d; /* Error message in red */
+    text-align: center;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+/* Suggestions container */
+#suggestions {
+    position: absolute;
+    top: 140px; /* Adjust as needed */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%; /* Ensure responsiveness */
+    max-width: 420px;
+    background-color: #0d0d0d; /* Proper dark background */
+    border: 1px solid #222; /* Subtle border for separation */
+    border-radius: 10px; /* Clean modern corners */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7); /* Stronger shadow for depth */
+    z-index: 1000;
+    overflow: hidden;
+    display: none; /* Initially hidden */
+}
+
+/* Individual suggestion items */
+#suggestions div {
+    padding: 12px 18px; /* Spacious padding for touch-friendly design */
+    color: #eaeaea; /* Light text for strong contrast */
+    background-color: transparent;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions */
+}
+
+#suggestions div:last-child {
+    border-bottom: none;
+}
+
+/* Hover effect for suggestions */
+#suggestions div:hover {
+    background-color: #1a1a1a; /* Slightly lighter on hover for contrast */
+    color: #ffffff; /* Pure white for visibility on hover */
+}
+
+/* Optional: Highlighting the active suggestion */
+#suggestions div.active {
+    background-color: #333333; /* Highlight color for active suggestion */
+    color: #ffffff;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center; /* Center the pagination */
+    align-items: center;
+    gap: 5px; /* Space between items */
+    margin: 20px 0;
+}
+
+.page-link {
+    padding: 6px 12px;
+    font-size: 14px;
+    text-decoration: none;
+    color: #fff;
+    background-color: #007BFF;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.page-link:hover {
+    background-color: #0056b3;
+}
+
+.page-link.active {
+    background-color: #FFC107;
+    font-weight: bold;
+    pointer-events: none; /* Disable clicks on the active page */
+}
+
+.dots {
+    color: #555; /* Gray color for dots */
+    font-weight: bold;
+    background: none; /* Remove background */
+    border: none; /* Remove border */
+    padding: 0; /* Remove padding */
+    margin: 0 5px; /* Add space around dots */
+    cursor: default; /* Prevent pointer cursor */
+    font-size: 16px; /* Adjust font size for emphasis */
+}
+
+/* General Modal Styling */
+.modal2 {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.8); /* Black background with opacity */
+    animation: fadeBackground 0.5s ease-in-out; /* Background fade-in animation */
+}
+
+/* Modal Content Box */
+.modal-content2 {
+    position: relative;
+    background-color: #1e1e1e; /* Dark background */
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%; /* Default width */
+    max-width: 500px; /* Maximum width */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5); /* Enhanced shadow */
+    animation: slideDown 0.5s ease; /* Slide-down effect */
+    color: #eaeaea; /* Light text color */
+    opacity: 0;
+    transform: translateY(-50px);
+    animation: fadeSlideIn 0.5s ease forwards; /* Combined fade and slide effect */
+}
+
+/* Close Button */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease; /* Smooth color transition */
+}
+
+.close:hover,
+.close:focus {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Form Styling */
+#request-form label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+    color: #eaeaea; /* Light text color for labels */
+}
+
+#request-form input,
+#request-form select,
+#request-form textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0 15px;
+    border: 1px solid #444; /* Darker border */
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #2b2b2b; /* Dark input background */
+    color: #eaeaea; /* Light text color */
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Add focus animation */
+}
+
+#request-form input:focus,
+#request-form select:focus,
+#request-form textarea:focus {
+    outline: none;
+    border-color: #4caf50; /* Highlight border */
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.6); /* Glowing effect */
+}
+
+#request-form button {
+    width: 100%; /* Ensure it spans the width of the form */
+    background-color: #4caf50;
+    color: #fff;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center; /* Center-align text */
+    margin: 0; /* Remove any default margin */
+    box-sizing: border-box; /* Include padding and borders in width */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Button hover animation */
+}
+
+#request-form button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+/* Parent container fix */
+.modal-content2 {
+    text-align: center; /* Center-align all child elements */
+    padding: 20px;
+    margin: 10% auto;
+    width: 90%; /* Adjust as needed */
+    max-width: 500px;
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+/* Message Styling */
+.message {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #eaeaea; /* Light message text */
+}
+
+/* Fade-In Animation for Modal Background */
+@keyframes fadeBackground {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Fade and Slide Animation for Modal Content */
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth Slide-Out Animation */
+@keyframes fadeSlideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+
+.char-count-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+
+.char-count {
+    position: absolute;
+    right: 10px; /* Align to the right inside the container */
+    top: 45%; /* Vertically center the character count */
+    transform: translateY(-50%); /* Perfect vertical alignment */
+    font-size: 12px;
+    color: gray;
+    pointer-events: none; /* Prevent interaction */
+    background-color: transparent; /* Transparent to blend with input field */
+    padding: 0; /* No extra padding */
+    border-radius: 0; /* No rounded corners */
+}
+
+/* Success-specific Styles */
+/* Success Modal Styles */
+/* Success-specific Styles */
+/* Success-specific Styles */
+/* Success-specific Styles */
+/* Success Modal Styles */
+/* Success-specific Styles */
+:root {
+    --modal-bg: #121212;
+    --modal-border: :none;
+    --modal-text: #bbbbbb;
+    --modal-button-bg: #007BFF;
+    --modal-button-hover: #3a3a3a;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Ensure styles apply only to #successModal */
+#successModal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+}
+
+#successModal .modal-content {
+    background-color: var(--modal-bg);
+    border: 2px solid var(--modal-border);
+    border-radius: 10px;
+    padding: 20px;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    margin: 15% auto;
+    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.2);
+    animation: fadeInScale 0.4s ease-out;
+}
+
+#successModal .close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--modal-text);
+    transition: color 0.3s ease;
+}
+
+#successModal .close:hover {
+    color: #ffffff;
+}
+
+#successModal h2 {
+    color: #ffffff !important;
+    font-size: 1.8rem;
+    margin: 15px 0;
+    animation: slideUp 0.5s ease-out;
+}
+
+#successModal p {
+    font-size: 1.1rem;
+    padding: 0 20px;
+    color: var(--modal-text);
+    animation: slideUp 0.6s ease-out;
+}
+
+#successModal .submit-button {
+    background-color: var(--modal-button-bg);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: background 0.3s ease;
+}
+
+#successModal .submit-button:hover {
+    background-color: var(--modal-button-hover);
+}
