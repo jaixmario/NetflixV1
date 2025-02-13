@@ -40,8 +40,7 @@ def query_db(query, args=(), one=False):
     with closing(get_db()) as conn:
         cursor = conn.cursor()
         cursor.execute(query, args)
-        rv = [dict((cursor.description[idx][0], value)
-                   for idx, value in enumerate(row)) for row in cursor.fetchall()]
+        rv = [dict((cursor.description[idx][0], value) for idx, value in enumerate(row)) for row in cursor.fetchall()]
         return (rv[0] if rv else None) if one else rv
 
 def insert_db(query, args=()):
@@ -746,6 +745,94 @@ def fetch_tv_data(tmdb_id):
         'seasons': seasons
     }
 
+@app.route('/admin/edit')
+def edit_list():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    shows = query_db("SELECT id, imdb_id, name, type, year, quality FROM shows ORDER BY name LIMIT ? OFFSET ?", (per_page, offset))
+    return render_template('edit_list.html', shows=shows, page=page)
+
+@app.route('/admin/edit/<imdb_id>', methods=['GET', 'POST'])
+def edit_item(imdb_id):
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+
+    show = query_db("SELECT * FROM shows WHERE imdb_id = ?", (imdb_id,), one=True)
+    if not show:
+        return "Show not found", 404
+
+    if request.method == 'POST':
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                UPDATE shows SET
+                    name = ?, thumbnail = ?, rating = ?, description = ?, year = ?, quality = ?, file_id = ?
+                WHERE imdb_id = ?
+            """, (
+                request.form['name'],
+                request.form['thumbnail'],
+                request.form['rating'],
+                request.form['description'],
+                request.form['year'],
+                request.form['quality'],
+                request.form.get('file_id', ''),
+                imdb_id
+            ))
+
+            cursor.execute("DELETE FROM genres WHERE show_id = ?", (show['id'],))
+            for genre in request.form.getlist('genres'):
+                cursor.execute("INSERT INTO genres (show_id, genre) VALUES (?, ?)", (show['id'], genre))
+
+            if show['type'] == 'tv':
+                for key in request.form:
+                    if key.startswith('episode_'):
+                        parts = key.split('_')
+                        field_type = parts[1]  # title, file, desc, thumb, date
+                        season_num = parts[2]
+                        episode_num = parts[3]
+
+                        field_map = {
+                            'title': 'name',
+                            'file': 'file_id',
+                            'desc': 'description',
+                            'thumb': 'thumbnail',
+                            'date': 'air_date'
+                        }
+
+                        if field_type in field_map:
+                            cursor.execute(f"""
+                                UPDATE episodes
+                                SET {field_map[field_type]} = ?
+                                WHERE season_id IN (SELECT id FROM seasons WHERE show_id = ? AND season_number = ?)
+                                AND episode_number = ?
+                            """, (request.form[key], show['id'], season_num, episode_num))
+
+            conn.commit()
+            flash('Changes saved successfully!', 'success')
+            return redirect(url_for('edit_list'))
+
+        except Exception as e:
+            conn.rollback()
+            flash(f'Error saving changes: {str(e)}', 'error')
+        finally:
+            conn.close()
+
+    show['genres'] = [g['genre'] for g in query_db("SELECT genre FROM genres WHERE show_id = ?", (show['id'],))]
+    if show['type'] == 'tv':
+        seasons = query_db("SELECT * FROM seasons WHERE show_id = ? ORDER BY season_number", (show['id'],))
+        for season in seasons:
+            season['episodes'] = query_db("SELECT * FROM episodes WHERE season_id = ? ORDER BY episode_number", (season['id'],))
+        show['seasons'] = seasons
+
+    return render_template('edit_item.html', show=show)
+    
 def fetch_episodes(tmdb_id, season_number):
     url = f'{BASE_URL}/tv/{tmdb_id}/season/{season_number}?api_key={TMDB_API_KEY}'
     response = requests.get(url)
@@ -1263,7 +1350,7 @@ def generate():
         temp_pages[temp_path] = {"key": key, "expiry": expiry_time}
         save_temp_pages(temp_pages)
 
-    temp_url = f"https://netflix-gqje.onrender.com/{temp_path}"
+    temp_url = f"https://netflix-me7b.onrender.com/{temp_path}"
 
     gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
     gp_response = requests.get(gp_link_api)
