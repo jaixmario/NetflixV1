@@ -61,18 +61,20 @@
 
 
 <div id="apiKeyModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closePopup()">&times;</span>
-        <h2>ENTER ACCESS KEY</h2>
-        <input type="text" id="apiKeyInput" placeholder="ENTER YOUR ACCESS KEY ">
-        <div class="button-container">
-            <button id="freeKeyButton" onclick="getFreeKey()">GET FREE KEY</button>
-            <button onclick="buyKey()">BUY KEY</button>
+        <div class="modal-content">
+            <span class="close" onclick="closePopup()">&times;</span>
+            <h2>ENTER ACCESS KEY</h2>
+            <input type="hidden" id="selectedShowId" value="">
+            <input type="text" id="apiKeyInput" placeholder="ENTER YOUR ACCESS KEY ">
+            <div class="button-container">
+                <button id="freeKeyButton" onclick="getFreeKey()">GET FREE KEY</button>
+
+                <button onclick="buyKey()">BUY KEY</button>
+            </div>
+            <button class="submit-button" onclick="validateApiKey()">SUBMIT</button>
+            <p id="apiMessage" class="message"></p>
         </div>
-        <button class="submit-button" onclick="validateApiKey()">SUBMIT</button>
-        <p id="apiMessage" class="message"></p>
     </div>
-</div>
 
 {% if shows %}
     <h1>NETFLIX!!!!</h1>
@@ -119,265 +121,152 @@
 {% endif %}
 
 <script>
-    // Open the request form popup
-    function openRequestPopup() {
-        document.getElementById('requestModal').style.display = 'block';
+    function checkAccess(showId) {
+        const apiKey = getCookie('apiKey');
+        document.getElementById('selectedShowId').value = showId;
+        if (apiKey) {
+            validateApiKey(apiKey);
+        } else {
+            showPopup();
+        }
     }
 
-    // Close the request form popup
-    function closeRequestPopup() {
-        document.getElementById('requestModal').style.display = 'none';
+    function showPopup() {
+        document.getElementById('apiKeyModal').style.display = 'block';
     }
 
-    // Handle form submission
-document.getElementById('request-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
+    function closePopup() {
+        document.getElementById('apiKeyModal').style.display = 'none';
+    }
 
-        // Collect form data
-        const type = document.getElementById('type').value;
-        const name = document.getElementById('name').value;
-        const year = document.getElementById('year').value;
-        const email = document.getElementById('email').value;
-        const comments = document.getElementById('comments').value;
-
-        // Prepare email content
-        const subject = `New Request: ${type} - ${name}`;
-        const body = `Type: ${type}\nName: ${name}\nYear: ${year}\nEmail: ${email}\nComments: ${comments}`;
-
-        try {
-            // Send email via backend
-            const response = await fetch('/send_email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recipient: email, // You can also set a fixed recipient if needed
-                    subject: subject,
-                    body: body,
-                }),
-            });
-
-            const result = await response.json();
-            const messageElement = document.getElementById('requestMessage');
-
-            if (response.ok) {
-    messageElement.textContent = "Your request has been sent successfully!";
-    messageElement.style.color = "green";
-    document.getElementById('request-form').reset(); // Clear the form
-
-    // Redirect to the home page after 2 seconds
-    setTimeout(() => {
-        window.location.href = '/';
-    }, 2000);
-            } else {
-                messageElement.textContent = result.error || "Failed to send your request.";
-                messageElement.style.color = "red";
-            }
-        } catch (error) {
-            console.error("Error submitting the request:", error);
-            const messageElement = document.getElementById('requestMessage');
-            messageElement.textContent = "An error occurred. Please try again.";
-            messageElement.style.color = "red";
-        }
-    });
-
-    // Close the modal when clicking outside the modal content
-    window.onclick = function (event) {
-        const modal2 = document.getElementById('requestModal2');
-        if (event.target === modal2) {
-            closeRequestPopup();
-        }
+    window.onclick = function(event) {
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        if (event.target === apiKeyModal) closePopup();
     };
 
-    // Clean input before submission
+    async function validateApiKey(apiKeyFromCookie = null) {
+        const apiKey = apiKeyFromCookie || document.getElementById('apiKeyInput').value;
+        const messageElement = document.getElementById('apiMessage');
+        const showId = document.getElementById('selectedShowId').value;
+
+        if (!apiKey) {
+            messageElement.textContent = "PLEASE ENTER YOUR ACCESS KEY ";
+            messageElement.style.color = "red";
+            return;
+        }
+
+        try {
+            const response = await fetch('/validate-key', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ apiKey })
+            });
+            const result = await response.json();
+            messageElement.textContent = result.message;
+
+            if (response.ok) {
+                messageElement.style.color = "green";
+                if (!apiKeyFromCookie) setCookie('apiKey', apiKey, 30);
+                setTimeout(() => {
+                    closePopup();
+                    window.location.href = `/show/${showId}`;
+                }, 500);
+            } else {
+                messageElement.style.color = "red";
+                if (apiKeyFromCookie) {
+                    setCookie('apiKey', '', -1);
+                    showPopup();
+                }
+            }
+        } catch (error) {
+            messageElement.textContent = "An error occurred. Please try again.";
+            messageElement.style.color = "red";
+            console.error(error);
+        }
+    }
+
+    function setCookie(name, value, days) {
+        const d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = "expires=" + d.toUTCString();
+        document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // Show suggestions dynamically
+    async function showSuggestions() {
+        const query = document.getElementById("search-input").value.trim().toLowerCase();
+        const suggestionsDiv = document.getElementById("suggestions");
+
+        if (!query) {
+            suggestionsDiv.style.display = "none";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/suggestions?q=${encodeURIComponent(query)}`);
+            const filteredSuggestions = await response.json();
+
+            suggestionsDiv.innerHTML = "";
+            filteredSuggestions.forEach(name => {
+                const div = document.createElement("div");
+                div.textContent = name;
+                div.onclick = () => {
+                    document.getElementById("search-input").value = name;
+                    suggestionsDiv.style.display = "none";
+                    document.getElementById("search-form").submit();
+                };
+                suggestionsDiv.appendChild(div);
+            });
+            suggestionsDiv.style.display = "block";
+        } catch (error) {
+            console.error("Failed to load suggestions:", error);
+            suggestionsDiv.style.display = "none";
+        }
+    }
+
     function cleanInput() {
         const searchInput = document.getElementById("search-input").value.trim();
         document.getElementById("search-input").value = searchInput;
-        return !!searchInput; // Prevent empty submissions
+        return !!searchInput;
     }
-    
-     let selectedShowId = '';
-
-        // Function to check access based on stored API key
-        function checkAccess(showId) {
-            const apiKey = getCookie('apiKey');
-            if (apiKey) {
-                // Automatically validate the stored API key
-                validateApiKey(apiKey, showId);
-            } else {
-                // Show the popup if no API key is found
-                selectedShowId = showId;
-                showPopup();
-            }
-        }
-
-        function showPopup() {
-    document.getElementById('apiKeyModal').style.display = 'block';
-}
-
-function closePopup() {
-    document.getElementById('apiKeyModal').style.display = 'none';
-}
-
-// Close the modal when clicking outside the modal content
-window.onclick = function (event) {
-    const modal = document.getElementById('apiKeyModal');
-    if (event.target === modal) {
-        closePopup();
-    }
-};
-
-        // Function to validate API key (called both with and without stored cookie)
-        async function validateApiKey(apiKeyFromCookie = null, showId = null) {
-    const apiKey = apiKeyFromCookie || document.getElementById('apiKeyInput').value;
-    const messageElement = document.getElementById('apiMessage');
-    
-    if (!apiKey) {
-        messageElement.textContent = "PLEASE ENTER YOUR ACCESS KEY ";
-        messageElement.style.color = "red";
-        return;
-    }
-
-    try {
-        const response = await fetch('/validate-key', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ apiKey })
-        });
-
-        const result = await response.json();
-        messageElement.textContent = result.message;
-        
-        if (response.ok) {
-            messageElement.style.color = "green";
-            if (!apiKeyFromCookie) {
-                setCookie('apiKey', apiKey, 30);
-            }
-            setTimeout(() => {
-                closePopup();
-                window.location.href = `/show/${showId || selectedShowId}`;
-            }, 500);
-        } else {
-            messageElement.style.color = "red";
-            if (apiKeyFromCookie) {
-                setCookie('apiKey', '', -1);
-                showPopup();
-            }
-        }
-    } catch (error) {
-        messageElement.textContent = "An error occurred. Please try again.";
-        messageElement.style.color = "red";
-        console.error(error);
-    }
-}
-
-        // Function to set a cookie
-        function setCookie(name, value, days) {
-            const d = new Date();
-            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-            const expires = "expires=" + d.toUTCString();
-            document.cookie = name + "=" + value + ";" + expires + ";path=/";
-        }
-
-        // Function to get a cookie by name
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
-        }
-        
-// Show filtered suggestions
-async function showSuggestions() {
-    const query = document.getElementById("search-input").value.trim().toLowerCase();
-    const suggestionsDiv = document.getElementById("suggestions");
-
-    if (!query) {
-        suggestionsDiv.style.display = "none";
-        return;
-    }
-
-    try {
-        const response = await fetch(`/suggestions?q=${encodeURIComponent(query)}`);
-        if (!response.ok) throw new Error("Failed to fetch suggestions");
-        const filteredSuggestions = await response.json();
-
-        // Clear and display suggestions
-        suggestionsDiv.innerHTML = "";
-        filteredSuggestions.forEach(name => {
-            const div = document.createElement("div");
-            div.textContent = name;
-            div.onclick = () => {
-                document.getElementById("search-input").value = name; // Populate the search input
-                suggestionsDiv.style.display = "none"; // Hide suggestions
-                document.getElementById("search-form").submit(); // Submit the search form
-            };
-            suggestionsDiv.appendChild(div);
-        });
-        suggestionsDiv.style.display = "block";
-    } catch (error) {
-        console.error("Failed to load suggestions:", error);
-        suggestionsDiv.style.display = "none";
-    }
-}
-
-// Clean input before submission
-function cleanInput() {
-    const searchInput = document.getElementById("search-input").value.trim();
-    document.getElementById("search-input").value = searchInput;
-    return !!searchInput; // Prevent empty submissions
-}
-
-// Close modal when clicking outside of modal content
-window.onclick = function (event) {
-    // Close request modal
-    const requestModal = document.getElementById('requestModal');
-    if (event.target === requestModal) {
-        closeRequestPopup();
-    }
-
-    // Close API key modal
-    const apiKeyModal = document.getElementById('apiKeyModal');
-    if (event.target === apiKeyModal) {
-        closePopup();
-    }
-};
 
     function updateCharacterCount(fieldId, limit) {
         const field = document.getElementById(fieldId);
         const charCount = field.value.length;
-
-        // Update the corresponding character count span
         const charCountDisplay = document.getElementById(`${fieldId}CharCount`);
         charCountDisplay.textContent = `${charCount}/${limit}`;
     }
-    
+
     async function getFreeKey() {
-    const freeKeyButton = document.getElementById('freeKeyButton');
-    try {
-        // Disable button immediately
-        freeKeyButton.disabled = true;
-        freeKeyButton.textContent = 'please wait....';
+        const freeKeyButton = document.getElementById('freeKeyButton');
+        try {
+            freeKeyButton.disabled = true;
+            freeKeyButton.textContent = 'please wait....';
 
-        // Make API request
-        const response = await fetch("/generate", { method: "POST" });
-        const result = await response.json();
+            const response = await fetch("/generate", { method: "POST" });
+            const result = await response.json();
 
-        if (result.short_url) {
-            // Redirect to the short URL in current tab
-            window.location.href = result.short_url;
-        } else {
-            alert("Error generating free key. Try again later.");
-        }
-    } catch (error) {
-        alert("An error occurred. Please try again.");
-        console.error(error);
-    } finally {
-        // Only re-enable if redirect failed
-        if (!window.location.href.includes(result?.short_url)) {
-            freeKeyButton.disabled = false;
-            freeKeyButton.textContent = 'GET FREE KEY';
+            if (result.short_url) {
+                window.location.href = result.short_url;
+            } else {
+                alert("Error generating free key. Try again later.");
+            }
+        } catch (error) {
+            alert("An error occurred. Please try again.");
+            console.error(error);
+        } finally {
+            if (!window.location.href.includes(result?.short_url)) {
+                freeKeyButton.disabled = false;
+                freeKeyButton.textContent = 'GET FREE KEY';
+            }
         }
     }
-}
 </script>
 
 </body>
