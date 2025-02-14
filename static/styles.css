@@ -593,13 +593,13 @@ button:hover {
 #request-form select:focus,
 #request-form textarea:focus {
     outline: none;
-    border-color: #4caf50; /* Highlight border */
+    border-color: #ff4d4d; /* Highlight border */
     box-shadow: 0 0 8px rgba(76, 175, 80, 0.6); /* Glowing effect */
 }
 
 #request-form button {
     width: 100%; /* Ensure it spans the width of the form */
-    background-color: #4caf50;
+    background-color: #ff4d4d;
     color: #fff;
     padding: 10px;
     border: none;
@@ -613,7 +613,7 @@ button:hover {
 }
 
 #request-form button:hover {
-    background-color: #45a049;
+    background-color: #ff4d4d;
     transform: translateY(-2px); /* Slight lift effect */
 }
 
