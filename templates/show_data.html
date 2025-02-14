@@ -79,18 +79,21 @@
         </div>
 
         <!-- Button to trigger advanced edit modal -->
-        <button type="button" class="btn btn-secondary mt-4" data-bs-toggle="modal" data-bs-target="#advancedEditModal">
-            Show Advanced Edit
-        </button>
-
+        <!-- Button to trigger advanced edit modal -->
+<button type="button" class="btn btn-secondary mt-4" data-bs-toggle="modal" data-bs-target="#advancedEditModal">
+    <i class="bi bi-pencil-square me-2"></i> Show Advanced Edit
+</button>
+<div class="modal fade" id="advancedEditModal" tabindex="-1" aria-labelledby="advancedEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="advancedEditModalLabel">
+                    <i class="bi bi-gear-wide-connected me-2"></i>Advanced Edit
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <!-- ... rest of modal content remains the same ... -->
         <!-- Advanced Edit Modal -->
-        <div class="modal fade" id="advancedEditModal" tabindex="-1" aria-labelledby="advancedEditModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="advancedEditModalLabel">Advanced Edit</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
                     <div class="modal-body">
                         <form id="updateForm">
                             <div class="mb-3">
@@ -120,6 +123,7 @@
                             <div class="mb-3">
                                 <label for="quality" class="form-label">Quality:</label>
                                 <select id="quality" name="quality" class="form-select">
+                                <option value="2160p" {% if data.quality == '2160p' %}selected{% endif %}>2160p</option>
                                     <option value="1080p" {% if data.quality == '1080p' %}selected{% endif %}>1080p</option>
                                     <option value="720p" {% if data.quality == '720p' %}selected{% endif %}>720p</option>
                                     <option value="480p" {% if data.quality == '480p' %}selected{% endif %}>480p</option>
@@ -191,40 +195,67 @@
         </div>
 
         <!-- Add FileId Section -->
-        <h2 class="mt-5">Add FileId</h2>
-        <form action="/add_file_ids" method="POST">
-            {% if data.type == 'movie' %}
-                <div class="mb-3">
-                    <label for="file_id" class="form-label">Enter FileId for Movie:</label>
-                    <input type="text" id="file_id" name="file_id" class="form-control" required>
-                </div>
-            {% elif data.type == 'tv' %}
-                <!-- Bulk FileId Input -->
-                <div class="mb-3">
-                    <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
-                    <textarea id="bulkFileIds" class="form-control mb-3" placeholder="Example: 01ZDEC6CX2RDOEWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, 01ZDEC6CVYR3IIFB5T7JCKY7FYQNIQKSKB, ..."></textarea>
-                    <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">Auto-fill Episodes</button>
-                </div>
+        <!-- Add FileId Section -->
+<h2 class="mt-5">Add FileId</h2>
+<form action="/add_file_ids" method="POST">
+    {% if data.type == 'movie' %}
+        <!-- Movie FileId Input -->
+        <div class="mb-3">
+            <label for="file_id" class="form-label">Enter File ID for Movie:</label>
+            <input type="text" 
+                   id="file_id" 
+                   name="file_id" 
+                   class="form-control" 
+                   placeholder="Enter File ID for Movie"
+                   required>
+        </div>
+    {% elif data.type == 'tv' %}
+        <!-- Bulk Input for TV Shows -->
+        <div class="mb-3">
+            <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
+            <textarea id="bulkFileIds" 
+                      class="form-control mb-3" 
+                      placeholder="Example: 01ZDEC6CX2RD0EWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, ..."></textarea>
+            <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">
+                <i class="bi bi-magic"></i> Auto-fill Episodes
+            </button>
+        </div>
 
-                <!-- Existing per-episode inputs (add class="episode-file-id") -->
-                {% for season in data.seasons %}
-                    <h3>Season {{ season.season_number }}</h3>
-                    {% for episode in season.episodes %}
-                        <div class="mb-3">
-                            <label for="file_id_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
-                                FileId for Episode "{{ episode.name }}":
-                            </label>
-                            <input type="text" 
-                                   id="file_id_{{ season.season_number }}_{{ loop.index0 }}" 
-                                   name="file_id_{{ season.season_number }}_{{ loop.index0 }}" 
-                                   class="form-control episode-file-id">
-                        </div>
-                    {% endfor %}
+        <!-- Per-Episode Inputs -->
+        {% for season in data.seasons %}
+            <div class="season-section card p-3 mb-4">
+                <h3>Season {{ season.season_number }}</h3>
+                {% for episode in season.episodes %}
+                    <div class="mb-3 episode-card">
+                        <label for="file_id_{{ season.season_number }}_{{ loop.index0 }}" class="form-label">
+                            {{ 'S{:02d}E{:02d}:'.format(season.season_number, episode.episode_number) }} 
+                            <em>"{{ episode.name }}"</em>
+                        </label>
+                        <input type="text" 
+                               id="file_id_{{ season.season_number }}_{{ loop.index0 }}" 
+                               name="file_id_{{ season.season_number }}_{{ loop.index0 }}" 
+                               class="form-control episode-file-id"
+                               placeholder="Enter File ID for {{ episode.name }}"
+                               {% if episode.file_id %}value="{{ episode.file_id }}"{% endif %}>
+                        {% if episode.file_error %}
+                            <div class="text-danger mt-1">
+                                <i class="bi bi-exclamation-triangle"></i> {{ episode.file_error }}
+                            </div>
+                        {% endif %}
+                    </div>
                 {% endfor %}
-            {% endif %}
-            <button type="submit" id="saveFileIdsButton" class="btn btn-primary">Save FileIds</button>
-        </form>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Submit Button -->
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary w-100 py-2">
+            <i class="bi bi-save"></i> Save File IDs
+        </button>
     </div>
+</form>
+</div>  <!-- Closing container div -->
 
     <!-- Bootstrap and jQuery (for AJAX) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
