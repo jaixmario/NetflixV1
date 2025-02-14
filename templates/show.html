@@ -350,7 +350,7 @@
         <p>IMDb Rating: <strong>{{ show.rating }}</strong></p>
 
         {% if show.type == 'movie' and show.file_id %}
-        <button class="get-link-button" onclick="getLink('{{ show.file_id }}', 'Movie', '{{ show.name }}')">Get Link</button>
+        <button class="get-link-button" onclick="getLink('{{ show.file_id }}', 'Movie', '{{ show.name | replace("'", "\\'") }}')">Get Link</button>
         {% endif %}
     </div>
 
@@ -369,7 +369,7 @@
             <button class="info-button" onclick="showDescription('{{ episode.description | replace('\n', ' ') | replace("'", "\\'") }}')">
         <i>i</i>
             </button>
-            <button class="get-link-button" onclick="getLink('{{ episode.file_id }}', 'S{{ season.season_number }} E{{ episode.episode_number }}', '{{ episode.name }}')">Get Link</button>
+            <button class="get-link-button" onclick="getLink('{{ episode.file_id }}', 'S{{ season.season_number }} E{{ episode.episode_number }}', '{{ episode.name | replace("'", "\\'") }}')">Get Link</button>
         </div>
         {% endfor %}
         {% endfor %}
