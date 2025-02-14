@@ -524,6 +524,89 @@ def get_token():
     else:
         return jsonify({"error": "Failed to acquire token"}), 400
 
+@app.route('/admin/edit/<imdb_id>/add_episode', methods=['POST'])
+def add_episode(imdb_id):
+    if 'admin_logged_in' not in session:
+        abort(403)
+    
+    try:
+        season_id = request.form.get('season_id')
+        if not season_id:
+            return jsonify({'error': 'Missing season ID'}), 400
+
+        # Get current max episode number
+        max_episode = query_db(
+            "SELECT MAX(episode_number) as max_ep FROM episodes WHERE season_id = ?",
+            (season_id,),
+            one=True
+        )['max_ep'] or 0
+
+        # Insert new episode
+        insert_db(
+            """INSERT INTO episodes 
+            (season_id, episode_number, name, description, thumbnail, air_date, file_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (season_id, max_episode + 1, 'New Episode', '', '', '', '')
+        )
+
+        # Update season episode count
+        insert_db(
+            "UPDATE seasons SET episode_count = ? WHERE id = ?",
+            (max_episode + 1, season_id)
+        )
+
+        return '', 204
+
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({'error': 'Database error'}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/admin/edit/<imdb_id>/add_season', methods=['POST'])
+def add_season(imdb_id):
+    if 'admin_logged_in' not in session:
+        abort(403)
+
+    try:
+        # Get show ID
+        show = query_db("SELECT id FROM shows WHERE imdb_id = ?", (imdb_id,), one=True)
+        if not show:
+            return jsonify({'error': 'Show not found'}), 404
+
+        # Get current max season
+        max_season = query_db(
+            "SELECT MAX(season_number) as max_season FROM seasons WHERE show_id = ?",
+            (show['id'],),
+            one=True
+        )['max_season'] or 0
+
+        # Insert new season
+        season_id = insert_db(
+            """INSERT INTO seasons 
+            (show_id, season_number, episode_count)
+            VALUES (?, ?, ?)""",
+            (show['id'], max_season + 1, 1)
+        )
+
+        # Create first episode
+        insert_db(
+            """INSERT INTO episodes 
+            (season_id, episode_number, name, description, thumbnail, air_date, file_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (season_id, 1, 'Episode 1', '', '', '', '')
+        )
+
+        return jsonify({'message': 'Season added'}), 201
+
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({'error': 'Database error'}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({'error': 'Server error'}), 500
+
 def poll_for_token(device_code):
     payload = {
         'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
