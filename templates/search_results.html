@@ -267,6 +267,74 @@
             }
         }
     }
+    
+    function openRequestPopup() {
+        document.getElementById('requestModal').style.display = 'block';
+    }
+
+    // Close the request form popup
+    function closeRequestPopup() {
+        document.getElementById('requestModal').style.display = 'none';
+    }
+
+    // Handle form submission
+document.getElementById('request-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        // Collect form data
+        const type = document.getElementById('type').value;
+        const name = document.getElementById('name').value;
+        const year = document.getElementById('year').value;
+        const email = document.getElementById('email').value;
+        const comments = document.getElementById('comments').value;
+
+        // Prepare email content
+        const subject = `New Request: ${type} - ${name}`;
+        const body = `Type: ${type}\nName: ${name}\nYear: ${year}\nEmail: ${email}\nComments: ${comments}`;
+
+        try {
+            // Send email via backend
+            const response = await fetch('/send_email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipient: email, // You can also set a fixed recipient if needed
+                    subject: subject,
+                    body: body,
+                }),
+            });
+
+            const result = await response.json();
+            const messageElement = document.getElementById('requestMessage');
+
+            if (response.ok) {
+    messageElement.textContent = "Your request has been sent successfully!";
+    messageElement.style.color = "green";
+    document.getElementById('request-form').reset(); // Clear the form
+
+    // Redirect to the home page after 2 seconds
+    setTimeout(() => {
+        window.location.href = '/';
+    }, 2000);
+            } else {
+                messageElement.textContent = result.error || "Failed to send your request.";
+                messageElement.style.color = "red";
+            }
+        } catch (error) {
+            console.error("Error submitting the request:", error);
+            const messageElement = document.getElementById('requestMessage');
+            messageElement.textContent = "An error occurred. Please try again.";
+            messageElement.style.color = "red";
+        }
+    });
+
+    // Close the modal when clicking outside the modal content
+    window.onclick = function (event) {
+        const modal2 = document.getElementById('requestModal2');
+        if (event.target === modal2) {
+            closeRequestPopup();
+        }
+    };
 </script>
 
 </body>
