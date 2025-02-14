@@ -835,11 +835,69 @@ def edit_list():
         return redirect(url_for('admin_login'))
     
     page = request.args.get('page', 1, type=int)
+    filter_type = request.args.get('type', 'all')
+    sort_by = request.args.get('sort', 'a-z')
+    filter_quality = request.args.get('quality', 'all')
+    search_query = request.args.get('search', '').strip()
+
     per_page = 20
     offset = (page - 1) * per_page
 
-    shows = query_db("SELECT id, imdb_id, name, type, year, quality FROM shows ORDER BY name LIMIT ? OFFSET ?", (per_page, offset))
-    return render_template('edit_list.html', shows=shows, page=page)
+    query = "SELECT COUNT(*) FROM shows WHERE 1=1"
+    params = []
+
+    if filter_type != 'all':
+        query += " AND type = ?"
+        params.append(filter_type)
+
+    if filter_quality != 'all':
+        query += " AND quality = ?"
+        params.append(filter_quality)
+
+    if search_query:
+        query += " AND LOWER(name) LIKE ?"
+        params.append(f"%{search_query.lower()}%")
+
+    total_items = query_db(query, params, one=True)["COUNT(*)"]
+    total_pages = (total_items + per_page - 1) // per_page
+
+    query = "SELECT id, imdb_id, name, type, year, quality FROM shows WHERE 1=1"
+    params = []
+
+    if filter_type != 'all':
+        query += " AND type = ?"
+        params.append(filter_type)
+
+    if filter_quality != 'all':
+        query += " AND quality = ?"
+        params.append(filter_quality)
+
+    if search_query:
+        query += " AND LOWER(name) LIKE ?"
+        params.append(f"%{search_query.lower()}%")
+
+    if sort_by == 'a-z':
+        query += " ORDER BY name ASC"
+    elif sort_by == 'z-a':
+        query += " ORDER BY name DESC"
+    elif sort_by == 'year_asc':
+        query += " ORDER BY year ASC"
+    elif sort_by == 'year_desc':
+        query += " ORDER BY year DESC"
+
+    query += " LIMIT ? OFFSET ?"
+    params.extend([per_page, offset])
+
+    shows = query_db(query, params)
+    
+    return render_template('edit_list.html', 
+                         shows=shows, 
+                         page=page,
+                         total_pages=total_pages,
+                         filter_type=filter_type,
+                         sort_by=sort_by,
+                         filter_quality=filter_quality,
+                         search_query=search_query)
 
 @app.route('/admin/edit/<imdb_id>', methods=['GET', 'POST'])
 def edit_item(imdb_id):
