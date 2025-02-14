@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit {{ show.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .episode-card { background-color: #f8f9fa; border: 1px solid #dee2e6; }
+        .season-section { padding: 20px; border: 1px solid #ced4da; border-radius: 5px; margin-bottom: 25px; }
+        .add-episode-btn { margin-left: 15px; }
+        .season-header { margin-bottom: 1.5rem; }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -18,30 +25,26 @@
         <h1>Editing: {{ show.name }}</h1>
         
         <form method="post">
-            <!-- Basic Info -->
+            <!-- Basic Info Section -->
             <div class="card mb-4">
                 <div class="card-header">Basic Info</div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Name</label>
-                            <input type="text" name="name" class="form-control" 
-                                   value="{{ show.name }}" required>
+                            <input type="text" name="name" class="form-control" value="{{ show.name }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Thumbnail URL</label>
-                            <input type="url" name="thumbnail" class="form-control" 
-                                   value="{{ show.thumbnail }}" required>
+                            <input type="url" name="thumbnail" class="form-control" value="{{ show.thumbnail }}" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Rating</label>
-                            <input type="number" step="0.1" name="rating" class="form-control" 
-                                   value="{{ show.rating }}" required>
+                            <input type="number" step="0.1" name="rating" class="form-control" value="{{ show.rating }}" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Year</label>
-                            <input type="number" name="year" class="form-control" 
-                                   value="{{ show.year }}" required>
+                            <input type="number" name="year" class="form-control" value="{{ show.year }}" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Quality</label>
@@ -53,8 +56,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Description</label>
-                            <textarea name="description" class="form-control" 
-                                      rows="3" required>{{ show.description }}</textarea>
+                            <textarea name="description" class="form-control" rows="3" required>{{ show.description }}</textarea>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Genres</label>
@@ -68,32 +70,43 @@
                 </div>
             </div>
 
-            <!-- Type-specific Fields -->
+            <!-- Movie File ID Section -->
             {% if show.type == 'movie' %}
-            <div class="card mb-4">
-                <div class="card-header">Movie Details</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">File ID</label>
-                            <input type="text" name="file_id" class="form-control" 
-                                   value="{{ show.file_id }}" required>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-12">
+                <label class="form-label">File ID</label>
+                <input type="text" 
+                       name="file_id" 
+                       class="form-control" 
+                       value="{{ show.file_id }}">
             </div>
-            {% else %}
+            {% endif %}
+
+            <!-- TV Show Section -->
+            {% if show.type == 'tv' %}
             <div class="card mb-4">
-                <div class="card-header">TV Show Episodes</div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>TV Show Episodes</span>
+                    <button type="button" class="btn btn-primary" onclick="addSeason()">
+                        <i class="bi bi-plus-circle"></i> Add Season
+                    </button>
+                </div>
                 <div class="card-body">
                     {% for season in show.seasons %}
                     <div class="season-section mb-5">
-                        <h4>Season {{ season.season_number }}</h4>
+                        <div class="d-flex justify-content-between align-items-center season-header">
+                            <h4>Season {{ season.season_number }}</h4>
+                            <div>
+                                <button type="button" 
+                                        class="btn btn-success add-episode-btn"
+                                        onclick="addEpisode('{{ season.id }}')">
+                                    <i class="bi bi-plus-circle"></i> Add Episode
+                                </button>
+                            </div>
+                        </div>
+                        
                         {% for episode in season.episodes %}
                         <div class="episode-card card mb-3">
-                            <div class="card-header">
-                                Episode {{ episode.episode_number }}
-                            </div>
+                            <div class="card-header">Episode {{ episode.episode_number }}</div>
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-6">
@@ -112,9 +125,8 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">Description</label>
-                                        <textarea 
-                                            name="episode_desc_{{ season.season_number }}_{{ episode.episode_number }}"
-                                            class="form-control">{{ episode.description }}</textarea>
+                                        <textarea name="episode_desc_{{ season.season_number }}_{{ episode.episode_number }}"
+                                                  class="form-control">{{ episode.description }}</textarea>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">Thumbnail URL</label>
@@ -142,11 +154,62 @@
 
             <!-- Form Actions -->
             <div class="text-center mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+                <button type="submit" class="btn btn-primary btn-lg">Save All Changes</button>
                 <a href="/admin/edit" class="btn btn-secondary btn-lg">Cancel</a>
             </div>
         </form>
     </div>
+
+    <script>
+    // Episode Addition
+    function addEpisode(seasonId) {
+        const formData = new FormData()
+        formData.append('season_id', seasonId)
+
+        fetch(`/admin/edit/{{ show.imdb_id }}/add_episode`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if(response.status === 204) {
+                window.location.reload()
+            } else {
+                alert('Error adding episode: ' + response.statusText)
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error)
+            alert('Failed to add episode')
+        })
+    }
+
+    // Season Addition
+    function addSeason() {
+        if (!confirm('Add new season?')) return
+
+        fetch(`/admin/edit/{{ show.imdb_id }}/add_season`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if(response.status === 201) {
+                window.location.reload()
+            } else {
+                alert('Error adding season: ' + response.statusText)
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error)
+            alert('Failed to add season')
+        })
+    }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
