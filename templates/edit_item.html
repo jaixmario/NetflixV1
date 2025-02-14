@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark"> <!-- Enable dark mode -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +7,39 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
-        .episode-card { background-color: #f8f9fa; border: 1px solid #dee2e6; }
-        .season-section { padding: 20px; border: 1px solid #ced4da; border-radius: 5px; margin-bottom: 25px; }
-        .add-episode-btn { margin-left: 15px; }
-        .season-header { margin-bottom: 1.5rem; }
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .episode-card, .season-section, .card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            color: #e0e0e0;
+        }
+        .form-control, .form-select {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+        .form-control::placeholder {
+            color: #bbb;
+        }
+        .btn-secondary {
+            background-color: #333;
+            color: #e0e0e0;
+            border-color: #555;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .navbar-dark {
+            background-color: #1e1e1e !important;
+        }
     </style>
 </head>
 <body>
@@ -49,10 +78,12 @@
                         <div class="col-md-3">
                             <label class="form-label">Quality</label>
                             <select name="quality" class="form-select" required>
+                            <option value="2160p" {% if show.quality == '2160' %}selected{% endif %}>2160p</option>
                                 <option value="1080p" {% if show.quality == '1080p' %}selected{% endif %}>1080p</option>
                                 <option value="720p" {% if show.quality == '720p' %}selected{% endif %}>720p</option>
                                 <option value="480p" {% if show.quality == '480p' %}selected{% endif %}>480p</option>
                             </select>
+                            
                         </div>
                         <div class="col-12">
                             <label class="form-label">Description</label>
