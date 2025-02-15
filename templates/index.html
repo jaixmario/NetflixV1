@@ -62,12 +62,12 @@
     
     
     <!-- Success Modal -->
-<div id="successModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeSuccessPopup()">&times;</span>
-        <h2 style="color: #4CAF50;">🎉 Success!</h2>
-        <p style="color: var(--text-color); margin: 20px 0;">Key activation successful!</p>
-        <button class="submit-button" onclick="closeSuccessPopup()">Continue Watching</button>
+<!-- Remove the existing success modal -->
+<!-- Add this toast div before </body> -->
+<div id="toast" class="toast">
+    <div class="toast-content">
+        <i class="fas fa-check-circle"></i>
+        <span class="toast-message">Key activated successfully!</span>
     </div>
 </div>
 
@@ -125,13 +125,9 @@
         // Close modals when clicking outside
 window.onclick = function(event) {
     const apiKeyModal = document.getElementById('apiKeyModal');
-    const successModal = document.getElementById('successModal');
 
     if (event.target === apiKeyModal) {
         closePopup();
-    }
-    if (event.target === successModal) {
-        closeSuccessPopup();
     }
 };
 
@@ -233,25 +229,28 @@ window.onclick = function(event) {
         }
         
         
-        // Add these functions
-function showSuccessPopup() {
-    document.getElementById('successModal').style.display = 'block';
+        // Remove showSuccessPopup and closeSuccessPopup functions
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.querySelector('.toast-message').textContent = message;
+    toast.style.display = 'flex';
+    
+    // Automatically hide after 3 seconds
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
 }
 
-function closeSuccessPopup() {
-    document.getElementById('successModal').style.display = 'none';
-}
-
-// Modify the existing DOMContentLoaded event listener
+// Modify the DOMContentLoaded event listener
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const activationStatus = urlParams.get('activation');
     
     if (activationStatus === 'success') {
-        showSuccessPopup();  // Show success modal instead of main modal
+        showToast('Key activation successful!');
         window.history.replaceState({}, document.title, window.location.pathname);
     } else if (activationStatus === 'error') {
-        // Existing error handling remains the same
+        // Existing error handling remains
         document.getElementById('apiMessage').textContent = 'Invalid key. Please try again.';
         document.getElementById('apiMessage').style.color = 'red';
         showPopup();
