@@ -697,105 +697,41 @@ button:hover {
 /* Success-specific Styles */
 /* Success Modal Styles */
 /* Success-specific Styles */
-:root {
-    --modal-bg: #121212;
-    --modal-border: :none;
-    --modal-text: #bbbbbb;
-    --modal-button-bg: #007BFF;
-    --modal-button-hover: #3a3a3a;
-}
-
-@keyframes fadeInScale {
-    from {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Ensure styles apply only to #successModal */
-#successModal {
-    display: none;
+/* Remove existing #successModal styles */
+/* Add toast styles */
+.toast {
     position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 16px;
+    border-radius: 8px;
+    display: none;
     z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s;
 }
 
-#successModal .modal-content {
-    background-color: var(--modal-bg);
-    border: 2px solid var(--modal-border);
-    border-radius: 10px;
-    padding: 20px;
-    width: 80%;
-    max-width: 400px;
-    text-align: center;
-    position: relative;
-    margin: 15% auto;
-    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.2);
-    animation: fadeInScale 0.4s ease-out;
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-#successModal .close {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 24px;
-    cursor: pointer;
-    color: var(--modal-text);
-    transition: color 0.3s ease;
+.toast-message {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
 }
 
-#successModal .close:hover {
-    color: #ffffff;
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
 }
 
-#successModal h2 {
-    color: #ffffff !important;
-    font-size: 1.8rem;
-    margin: 15px 0;
-    animation: slideUp 0.5s ease-out;
-}
-
-#successModal p {
-    font-size: 1.1rem;
-    padding: 0 20px;
-    color: var(--modal-text);
-    animation: slideUp 0.6s ease-out;
-}
-
-#successModal .submit-button {
-    background-color: var(--modal-button-bg);
-    color: #ffffff;
-    border: none;
-    padding: 10px 20px;
-    font-size: 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 15px;
-    transition: background 0.3s ease;
-}
-
-#successModal .submit-button:hover {
-    background-color: var(--modal-button-hover);
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 /* Add divider line */
