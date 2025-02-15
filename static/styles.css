@@ -797,3 +797,58 @@ button:hover {
 #successModal .submit-button:hover {
     background-color: var(--modal-button-hover);
 }
+
+/* Add divider line */
+
+/* Update existing footer CSS */
+.simple-footer {
+  background: #1B1B1B; /* Your specified color */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle divider */
+  padding: 1rem 1rem; /* Reduced padding */
+  margin-top: 2rem; /* Space above footer */
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0; /* Internal spacing */
+}
+
+/* Keep other existing styles */
+
+.copyright {
+  color: #ecf0f1;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.warning-button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.warning-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}
