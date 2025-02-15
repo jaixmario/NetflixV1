@@ -1241,6 +1241,58 @@ def add_file_ids():
 
     return redirect(url_for('home'))
         
+@app.route('/submit_report', methods=['POST'])
+def submit_report():
+    try:
+        data = request.get_json()
+        access_token = get_valid_token()
+        
+        # Build email content
+        email_body = f"""
+<html>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2 style="color: #4CAF50;">New Content Report</h2>
+    <table style="border-collapse: collapse; width: 100%;">
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Content Type:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('type', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Issue Type:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('issueType', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Email:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('email', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Title:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('showName', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>IMDb ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('showId', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Season:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('season', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Episode:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('episode', 'N/A')}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Report Details:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{data.get('comment', 'No comments provided')}</td></tr>
+    </table>
+</body>
+</html>
+"""
+
+        # Microsoft Graph API request
+        url = "https://graph.microsoft.com/v1.0/me/sendMail"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        email_data = {
+            "message": {
+                "subject": f"Content Report: {data.get('showName', 'Unknown Title')}",
+                "body": {"contentType": "HTML", "content": email_body},
+                "toRecipients": [{"emailAddress": {"address": "Mario22623@gmail.com"}}],
+            },
+            "saveToSentItems": "true"
+        }
+
+        response = requests.post(url, headers=headers, json=email_data)
+        if response.status_code == 202:
+            return jsonify({"message": "Report submitted successfully!"}), 200
+        else:
+            app.logger.error(f"Report failed: {response.status_code} - {response.text}")
+            return jsonify({"error": "Failed to submit report"}), 500
+
+    except Exception as e:
+        app.logger.error(f"Report error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+        
 @app.route('/send_email', methods=['POST'])
 def send_email():
     try:
