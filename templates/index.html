@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NETFLIX!!!!</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <h1>NETFLIX!!!!</h1>
@@ -90,7 +91,16 @@
         <a href="/?page={{ page + 1 }}" class="page-link">Next</a>
         {% endif %}
     </div>
-
+<!-- Add this to your warning.html template -->
+<footer class="simple-footer">
+  <div class="footer-divider"></div>
+  <div class="footer-content">
+    <p class="copyright">&copy; 2024 NETFLIX. All rights reserved.</p>
+    <button class="warning-button" onclick="window.location.href='/warning'">
+      <i class="fas fa-exclamation-triangle"></i> Content Disclaimer
+    </button>
+  </div>
+</footer>
     <script>
         // Function to check access based on stored API key
         function checkAccess(showId) {

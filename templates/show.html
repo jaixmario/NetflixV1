@@ -4,6 +4,7 @@
 <link rel="icon" type="image/jpeg" href="https://iili.io/2aL8UUx.md.jpg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>{{ show.name }}</title>
     <style>
         /* Dark Theme CSS */
@@ -347,17 +348,204 @@ img {
 img:hover {
             transform: scale(1.1);
         }
+        
+        /* Add to existing CSS */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.link-input {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    background: #333;
+    border: 1px solid #444;
+    color: white;
+}
+
+select.link-input {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: #333 url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") no-repeat right 10px center;
+    background-size: 12px;
+}
+
+ .report-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #dc3545; /* Professional red color */
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .report-button:hover {
+        background-color: #c82333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Adjust back button positioning */
+    .back-button {
+        display: inline-block;
+        margin: 20px 0;
+        /* Remove previous margin-left */
+    }
+    
+    /* Add to existing CSS */
+/* Add to existing CSS */
+.char-counter {
+    color: #888;
+    font-size: 14px;
+    text-align: right;
+    margin-top: 5px;
+    transition: color 0.3s ease;
+}
+.simple-footer {
+  background: #1B1B1B; /* Your specified color */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle divider */
+  padding: 1rem 1rem; /* Reduced padding */
+  margin-top: 2rem; /* Space above footer */
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0; /* Internal spacing */
+}
+
+/* Keep other existing styles */
+
+.copyright {
+  color: #ecf0f1;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.warning-button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.warning-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}
     </style>
 </head>
 <body>
     <h1>{{ show.name }}</h1>
 
     <img class="show-banner" src="{{ show.thumbnail }}" alt="{{ show.name }}">
-
+<button class="report-button" onclick="openReportModal()"><i class="fas fa-flag"></i> Report Issue</button>
     <div class="show-details">
         <p>{{ show.description }}</p>
         <p>IMDb Rating: <strong>{{ show.rating }}</strong></p>
+<!-- Add this near other modals -->
+<div id="reportModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <button class="close-cross" onclick="closeReportModal()">&times;</button>
+        <h2>Report Issue</h2>
+        <form id="reportForm" onsubmit="submitReport(event)">
+            <div class="form-group">
+                <label>Type:</label>
+                <input type="text" id="reportType" class="link-input" readonly 
+                    value="{{ 'Movie' if show.type == 'movie' else 'web series' }}">
+            </div>
 
+            {% if show.type == 'tv' %}
+            <div class="form-group" id="seasonGroup">
+                <label>Season:</label>
+                <select id="reportSeason" class="link-input" onchange="loadEpisodes(this.value)">
+                    {% for season in show.seasons %}
+                    <option value="{{ season.season_number }}">Season {{ season.season_number }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="episodeGroup">
+                <label>Episode:</label>
+                <select id="reportEpisode" class="link-input">
+                    {% for episode in show.seasons[0].episodes %}
+                    <option value="{{ episode.episode_number }}">Episode {{ episode.episode_number }}</option>
+                    
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+    <label>Issue Type:</label>
+    <select id="reportIssueType" class="link-input" required>
+        <option value="Link Not Generated">Link Not Generated</option>
+        <option value="Picture Error">Picture Error</option>
+        <option value="Name Error">Name Error</option>
+        <option value="Description Error">Description Error</option>
+        <option value="Audio Error">Audio Error</option>
+{% if show.type == 'tv' %}
+<option value="Episode Misplaced">Episode Misplaced</option>
+{% endif %}
+<option value="Other">Other</option>
+        
+    </select>
+</div>
+<div class="form-group">
+    <label>Email (for follow-up):</label>
+    <input type="email" id="reportEmail" class="link-input" placeholder="Enter your email (optional)">
+</div>
+
+            <!-- In the report form -->
+<!-- In the report form -->
+<div class="form-group">
+    <label>Comment:</label>
+    <textarea id="reportComment" class="link-input" required 
+        placeholder="Describe the issue..." style="height: 100px;"
+        oninput="updateCharCounter()" maxlength="100"></textarea>
+    <div id="charCounter" style="text-align: right; color: #888; font-size: 14px; margin-top: 5px;">0/100</div>
+</div>
+
+            <button type="submit" class="get-link-button">Submit Report</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add this button near the back button -->
         {% if show.type == 'movie' and show.file_id %}
         <button class="get-link-button" onclick="getLink('{{ show.file_id }}', 'Movie', '{{ show.name | replace("'", "\\'") }}')">Get Link</button>
         {% endif %}
@@ -385,7 +573,7 @@ img:hover {
     </div>
     {% endif %}
 
-    <a href="/" class="back-button">Back to Listings</a>
+    <a href="/" class="back-button"> <i class="fas fa-arrow-left"></i> Back to Listings</a>
 
     <div id="linkModal" class="modal">
     <div class="modal-content">
@@ -399,9 +587,9 @@ img:hover {
         <a id="generatedLink" href="#" target="_blank" style="display: none;"></a>
 
         <!-- Copy, Download, and Steam Beta Buttons -->
-        <button id="copyButton" class="close-modal copy-button" onclick="copyLink()">COPY LINK </button>
-        <button class="close-modal download-button" onclick="downloadFile()">DOWNLOAD </button>
-        <button id="steamBetaButton" class="close-modal" onclick="openSteamBeta()">STREAM (BETA V1)</button>
+        <button id="copyButton" class="close-modal copy-button" onclick="copyLink()"><i class="far fa-copy"></i> COPY LINK</button>
+        <button class="close-modal download-button" onclick="downloadFile()"><i class="fas fa-download"></i> DOWNLOAD</button>
+        <button id="steamBetaButton" class="close-modal" onclick="openSteamBeta()"><i class="fas fa-play-circle"></i> STREAM (BETA V1)</button>
     </div>
 </div>
 
@@ -411,7 +599,15 @@ img:hover {
             <button class="close-modal1" onclick="closeModal()">CLOSE</button>
         </div>
     </div>
-
+<footer class="simple-footer">
+  <div class="footer-divider"></div>
+  <div class="footer-content">
+    <p class="copyright">&copy; 2024 NETFLIX. All rights reserved.</p>
+    <button class="warning-button" onclick="window.location.href='/warning'">
+      <i class="fas fa-exclamation-triangle"></i> Content Disclaimer
+    </button>
+  </div>
+</footer>
     <script>
         function getLink(file_id, episodeNumber, episodeName) {
     // Reset file size display immediately
@@ -468,25 +664,18 @@ function formatFileSize(bytes) {
 }
 
             function copyLink() {
-        const linkText = document.getElementById("linkText");
-        const copyButton = document.querySelector(".close-modal.copy-button");
-
-        linkText.select();
-        linkText.setSelectionRange(0, 99999); // For mobile devices
-        navigator.clipboard.writeText(linkText.value)
-            .then(() => {
-                // Change button text to "Copied!!"
-                copyButton.textContent = "COPIED!!";
-
-                // Change it back to "COPY LINK" after 3 seconds
-                setTimeout(() => {
-                    copyButton.textContent = "COPY LINK ";
-                }, 3000);
-            })
-            .catch(err => {
-                alert("Failed to copy link: " + err);
-            });
-    }
+            const linkText = document.getElementById("linkText");
+            linkText.select();
+            navigator.clipboard.writeText(linkText.value)
+                .then(() => {
+                    const copyBtn = document.getElementById("copyButton");
+                    copyBtn.innerHTML = `<i class="fas fa-check"></i> Copied!`;
+                    setTimeout(() => {
+                        copyBtn.innerHTML = `<i class="far fa-copy"></i> Copy Link`;
+                    }, 2000);
+                })
+                .catch(err => alert("Copy failed: " + err));
+        }
 
         function downloadFile() {
             const linkText = document.getElementById("linkText").value;
@@ -533,6 +722,84 @@ window.onclick = function (event) {
 
 function closeLinkModal() {
     document.getElementById("linkModal").style.display = "none";
+}
+
+// Add these functions to the script
+function openReportModal() {
+    document.getElementById("reportModal").style.display = "flex";
+}
+
+function closeReportModal() {
+    document.getElementById("reportModal").style.display = "none";
+}
+
+function loadEpisodes(seasonNumber) {
+        {% if show.type == 'tv' %}
+        const season = {{ show.seasons|tojson|safe }}.find(s => s.season_number == seasonNumber);
+        const episodeSelect = document.getElementById('reportEpisode');
+        episodeSelect.innerHTML = ''; // Clear previous options
+
+        season.episodes.forEach(episode => {
+            const option = document.createElement('option');
+            option.value = episode.episode_number;
+            option.textContent = `Episode ${episode.episode_number}`;
+            episodeSelect.appendChild(option);
+        });
+        {% endif %}
+    }
+
+function submitReport(event) {
+    event.preventDefault();
+    
+    const reportData = {
+    type: document.getElementById("reportType").value,
+    issueType: document.getElementById("reportIssueType").value,
+    email: document.getElementById("reportEmail").value || "N/A",  // New email field
+    season: document.getElementById("reportSeason")?.value || "N/A",
+    episode: document.getElementById("reportEpisode")?.value || "N/A",
+    comment: document.getElementById("reportComment").value,
+    showId: "{{ show.imdb_id }}",
+    showName: "{{ show.name }}"
+};
+
+    fetch('/submit_report', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(reportData)
+    })
+    .then(handleResponse)
+    .catch(handleError);
+}
+
+function handleResponse(response) {
+    if (!response.ok) {
+        return response.json().then(err => {
+            throw new Error(err.error || 'Unknown error');
+        });
+    }
+    alert('Report submitted successfully!');
+    closeReportModal();
+    return response.json();
+}
+
+function handleError(error) {
+    console.error('Error:', error);
+    alert(`Error submitting report: ${error.message}`);
+}
+
+function updateCharCounter() {
+    const textarea = document.getElementById('reportComment');
+    const counter = document.getElementById('charCounter');
+    const charCount = textarea.value.length;
+    
+    counter.textContent = `${charCount}/100`;
+    
+    // Optional: Add visual feedback when approaching limit
+    if (charCount >= 280) {
+        counter.style.color = '#ff4444';
+    } else {
+        counter.style.color = '#888';
+    }
 }
     </script>
 </body>
