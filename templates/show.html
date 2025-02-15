@@ -378,102 +378,99 @@ select.link-input {
     background-size: 12px;
 }
 
- .report-button {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background-color: #dc3545; /* Professional red color */
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: all 0.3s ease;
-        z-index: 1000;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
+.report-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #4a4a4a; /* Neutral color */
+    color: #fff;
+    padding: 10px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
 
-    .report-button:hover {
-        background-color: #c82333;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
+.report-button:hover {
+    background-color: #5a5a5a;
+    transform: scale(1.05);
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s, fadeOut 0.5s 2.5s;
+}
+
+@keyframes slideIn {
+    from { bottom: -50px; opacity: 0; }
+    to { bottom: 20px; opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Character Counter Adjustment */
+.char-counter {
+    color: #666;
+    font-size: 13px;
+    transition: color 0.3s ease;
+}
+
+.char-counter.near-limit {
+    color: #ff9800;
+}
+
+.char-counter.over-limit {
+    color: #f44336;
+}
 
     /* Adjust back button positioning */
     .back-button {
-        display: inline-block;
-        margin: 20px 0;
-        /* Remove previous margin-left */
-    }
+    padding: 8px 16px;  /* Reduced from 10px 20px */
+    font-size: 14px;    /* Added font-size reduction */
+    margin: 20px 0;     /* Existing margin */
+    color: #fff;
+    background-color: var(--highlight-color);
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    text-align: center;
+    display: inline-block;
+}
     
     /* Add to existing CSS */
 /* Add to existing CSS */
-.char-counter {
-    color: #888;
-    font-size: 14px;
-    text-align: right;
-    margin-top: 5px;
-    transition: color 0.3s ease;
-}
-.simple-footer {
-  background: #1B1B1B; /* Your specified color */
-  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle divider */
-  padding: 1rem 1rem; /* Reduced padding */
-  margin-top: 2rem; /* Space above footer */
-}
-
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 0; /* Internal spacing */
-}
-
-/* Keep other existing styles */
-
-.copyright {
-  color: #ecf0f1;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.warning-button {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 0.8rem 1.5rem;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-}
-
-.warning-button:hover {
-  background: #c0392b;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-@media (max-width: 768px) {
-  .footer-content {
-    flex-direction: column;
-    text-align: center;
-  }
-}
     </style>
 </head>
 <body>
     <h1>{{ show.name }}</h1>
 
     <img class="show-banner" src="{{ show.thumbnail }}" alt="{{ show.name }}">
-<button class="report-button" onclick="openReportModal()"><i class="fas fa-flag"></i> Report Issue</button>
+<button class="report-button" onclick="openReportModal()" title="Help improve our service">
+        <i class="fas fa-flag"></i>
+    </button>
+    <div id="toast" class="toast">Thank you for helping us improve! ✨</div>
     <div class="show-details">
         <p>{{ show.description }}</p>
         <p>IMDb Rating: <strong>{{ show.rating }}</strong></p>
@@ -533,12 +530,14 @@ select.link-input {
             <!-- In the report form -->
 <!-- In the report form -->
 <div class="form-group">
-    <label>Comment:</label>
-    <textarea id="reportComment" class="link-input" required 
-        placeholder="Describe the issue..." style="height: 100px;"
-        oninput="updateCharCounter()" maxlength="100"></textarea>
-    <div id="charCounter" style="text-align: right; color: #888; font-size: 14px; margin-top: 5px;">0/100</div>
-</div>
+        <textarea id="reportComment" class="link-input" required 
+            placeholder="Please let us know what's wrong..." 
+            style="height: 100px;"
+            oninput="updateCharCounter()" 
+            maxlength="100"></textarea>
+        <div id="charCounter" class="char-counter"></div>
+    </div>
+</body>
 
             <button type="submit" class="get-link-button">Submit Report</button>
         </form>
@@ -599,15 +598,6 @@ select.link-input {
             <button class="close-modal1" onclick="closeModal()">CLOSE</button>
         </div>
     </div>
-<footer class="simple-footer">
-  <div class="footer-divider"></div>
-  <div class="footer-content">
-    <p class="copyright">&copy; 2024 NETFLIX. All rights reserved.</p>
-    <button class="warning-button" onclick="window.location.href='/warning'">
-      <i class="fas fa-exclamation-triangle"></i> Content Disclaimer
-    </button>
-  </div>
-</footer>
     <script>
         function getLink(file_id, episodeNumber, episodeName) {
     // Reset file size display immediately
@@ -774,10 +764,17 @@ function submitReport(event) {
 function handleResponse(response) {
     if (!response.ok) {
         return response.json().then(err => {
-            throw new Error(err.error || 'Unknown error');
+            throw new Error(err.error || 'Something went wrong. Please try again later.');
         });
     }
-    alert('Report submitted successfully!');
+    
+    // Show toast notification
+    const toast = document.getElementById('toast');
+    toast.style.display = 'block';
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+    
     closeReportModal();
     return response.json();
 }
@@ -791,15 +788,12 @@ function updateCharCounter() {
     const textarea = document.getElementById('reportComment');
     const counter = document.getElementById('charCounter');
     const charCount = textarea.value.length;
-    
-    counter.textContent = `${charCount}/100`;
-    
-    // Optional: Add visual feedback when approaching limit
-    if (charCount >= 280) {
-        counter.style.color = '#ff4444';
-    } else {
-        counter.style.color = '#888';
-    }
+    const remaining = 100 - charCount;
+
+    counter.textContent = `${remaining} characters remaining`;
+    counter.className = 'char-counter' + 
+        (remaining < 20 ? ' near-limit' : '') + 
+        (remaining < 0 ? ' over-limit' : '');
 }
     </script>
 </body>
