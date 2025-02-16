@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONTROL PANEL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 30px;
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+
+        .card {
+            background-color: #1f1f1f;
+            border: none;
+            border-radius: 10px;
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 500px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.6s ease-in-out;
+        }
+
+        .form-control, .btn {
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-weight: 400;
+            transition: all 0.2s ease-in-out;
+            width: 100%;
+            height: 40px;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            background-color: #2c2c2c;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            height: 45px;
+        }
+
+        .form-control:focus {
+            background-color: #2c2c2c;
+            color: #ffffff;
+            border-color: #8ab4f8;
+            box-shadow: none;
+        }
+
+        .btn-primary { background-color: #0d6efd; }
+        .btn-success { background-color: #198754; }
+        .btn-warning { background-color: #ffc107; }
+        .btn-danger  { background-color: #dc3545; }
+
+        .btn-primary:hover { background-color: #0b5ed7; }
+        .btn-success:hover { background-color: #157347; }
+        .btn-warning:hover { background-color: #ffca2c; }
+        .btn-danger:hover  { background-color: #bb2d3b; }
+
+        .btn i { margin-right: 8px; }
+
+        #resultMessage .alert {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(40px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Lockdown button states */
+        .lockdown-on {
+            background-color: #198754 !important;
+            border-color: #157347 !important;
+        }
+        .lockdown-off {
+            background-color: #dc3545 !important;
+            border-color: #bb2d3b !important;
+        }
+        
+        input[type="file"] {
+            display: block;
+            position: relative;
+            margin-top: 10px;
+            color: #e0e0e0;
+        }
+
+        .download-section {
+            margin-top: 20px;
+        }
+
+        ::placeholder {
+            color: #e0e0e0 !important;
+            opacity: 1;
+        }
+
+        :-ms-input-placeholder {
+            color: #e0e0e0 !important;
+        }
+
+        ::-ms-input-placeholder {
+            color: #e0e0e0 !important;
+        }
+        
+        input[type="file"].form-control {
+            height: 38px;
+            padding: 6px 12px;
+            line-height: 1.5;
+            cursor: pointer;
+        }
+
+        .card form .mb-3 {
+            margin-bottom: 0.75rem;
+        }
+
+        .form-label {
+            margin-bottom: 0.25rem;
+            font-size: 0.9em;
+        }
+       /* Freemode button states */
+.freemode-on {
+    background-color: #198754 !important;
+    border-color: #157347 !important;
+}
+.freemode-off {
+    background-color: #dc3545 !important;
+    border-color: #bb2d3b !important;
+}
+    </style>
+</head>
+<body>
+    <h1>CONTROL PANEL</h1>
+
+    <!-- IMDb Fetch Form -->
+    <div class="card shadow-sm">
+        <form action="/fetch" method="POST">
+            <input type="text" id="imdb_id" name="imdb_id" class="form-control mb-3" 
+                   placeholder="e.g., tt1234567" required>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Fetch Data
+            </button>
+        </form>
+    </div>
+
+    <!-- Upload Sections -->
+    <div class="card shadow-sm mt-3">
+        <form action="/upload_data" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="data_file" class="form-label">Upload data.db:</label>
+                <input type="file" id="data_file" name="data_file" 
+                       accept=".db" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-upload"></i> Upload data.db
+            </button>
+        </form>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <form action="/upload_user_token" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="user_token" class="form-label">Upload user_token.json:</label>
+                <input type="file" id="user_token" name="user_token" 
+                       accept=".json" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-upload"></i> Upload user_token.json
+            </button>
+        </form>
+    </div>
+    
+    <div class="card shadow-sm mt-3 download-section">
+        <div class="d-grid gap-2">
+            <form action="/download_data" method="GET">
+                <button type="submit" class="btn btn-success mb-2">
+                    <i class="fas fa-download"></i> Download data.db
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="card shadow-sm mt-3">
+        <div class="d-grid gap-2">
+            <button id="replaceBackupBtn" class="btn btn-danger">
+                <i class="fas fa-sync-alt"></i> Replace with Latest Backup
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="d-grid gap-2">
+            <a href="/admin/edit" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Open Editor
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="d-grid gap-2">
+            <button id="lockdownToggleBtn" class="btn lockdown-off">
+                <i class="fas fa-toggle-off"></i> Turn On Lockdown
+            </button>
+        </div>
+    </div>
+    
+    
+    <div class="card shadow-sm mt-3">
+    <div class="d-grid gap-2">
+        <button id="freemodeToggleBtn" class="btn freemode-off">
+            <i class="fas fa-toggle-off"></i> Turn On Free Mode
+        </button>
+    </div>
+</div>
+
+    <!-- Result Message Display -->
+    <div id="resultMessage" class="text-center mt-3"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Replace Backup Handler
+        document.getElementById("replaceBackupBtn").addEventListener("click", async function() {
+            const resultMessage = document.getElementById("resultMessage");
+            resultMessage.innerHTML = "";
+
+            try {
+                const response = await fetch("/replace_backup", { method: "POST" });
+                const result = await response.json();
+                
+                const alertType = response.ok ? "success" : "danger";
+                resultMessage.innerHTML = `
+                    <div class="alert alert-${alertType}">${result.message}</div>
+                `;
+            } catch (error) {
+                resultMessage.innerHTML = `
+                    <div class="alert alert-danger">Failed to replace backup</div>
+                `;
+            }
+        });
+
+       
+// Lockdown Toggle Handler
+document.getElementById("lockdownToggleBtn").addEventListener("click", async function () {
+    const resultMessage = document.getElementById("resultMessage");
+    resultMessage.innerHTML = "";
+
+    try {
+        const response = await fetch("/toggle_lockdown", { method: "POST" });
+        const result = await response.json();
+
+        if (response.ok) {
+            const currentState = result.lockdown;
+            if (currentState === "on") {
+                this.classList.remove("lockdown-off");
+                this.classList.add("lockdown-on");
+                this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
+            } else {
+                this.classList.remove("lockdown-on");
+                this.classList.add("lockdown-off");
+                this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+            }
+            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+        } else {
+            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+        }
+    } catch (error) {
+        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle lockdown. Please try again.</div>`;
+    }
+});
+
+// Initialize lockdown state on page load
+(async function initializeLockdownState() {
+    try {
+        const response = await fetch("/lockdown_status");
+        const result = await response.json();
+
+        if (response.ok) {
+            const button = document.getElementById("lockdownToggleBtn");
+            const currentState = result.lockdown;
+            if (currentState === "on") {
+                button.classList.add("lockdown-on");
+                button.classList.remove("lockdown-off");
+                button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
+            } else {
+                button.classList.add("lockdown-off");
+                button.classList.remove("lockdown-on");
+                button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+            }
+        }
+    } catch (error) {
+        console.error("Error initializing lockdown state:", error);
+    }
+})();
+
+        
+
+// Freemode Toggle Handler
+document.getElementById("freemodeToggleBtn").addEventListener("click", async function () {
+    const resultMessage = document.getElementById("resultMessage");
+    resultMessage.innerHTML = "";
+
+    try {
+        const response = await fetch("/toggle_freemode", { method: "POST" });
+        const result = await response.json();
+
+        if (response.ok) {
+            const currentState = result.freemode;
+            if (currentState === "on") {
+                this.classList.remove("freemode-off");
+                this.classList.add("freemode-on");
+                this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
+            } else {
+                this.classList.remove("freemode-on");
+                this.classList.add("freemode-off");
+                this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
+            }
+            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+        } else {
+            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+        }
+    } catch (error) {
+        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle free mode. Please try again.</div>`;
+    }
+});
+
+// Initialize freemode state on page load
+(async function initializeFreemodeState() {
+    try {
+        const response = await fetch("/freemode_status");
+        const result = await response.json();
+
+        if (response.ok) {
+            const button = document.getElementById("freemodeToggleBtn");
+            const currentState = result.freemode;
+            if (currentState === "on") {
+                button.classList.add("freemode-on");
+                button.classList.remove("freemode-off");
+                button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
+            } else {
+                button.classList.add("freemode-off");
+                button.classList.remove("freemode-on");
+                button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
+            }
+        }
+    } catch (error) {
+        console.error("Error initializing freemode state:", error);
+    }
+})();
+    </script>
+</body>
+</html>
