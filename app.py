@@ -145,7 +145,7 @@ def lockdown():
 @app.before_request
 def check_lockdown():
     # Skip lockdown for specific routes
-    if request.path in ['/toggle_lockdown', '/lockdown', '/admin', '/admin/home']:
+    if request.path in ['/toggle_lockdown', '/lockdown', '/admin', '/admin/home', '/lockdown_status', '/freemode_status', '/toggle_freemode']:
         return
 
     # Read lockdown status
@@ -1527,6 +1527,14 @@ def delete_expired_pages():
 # Start the cleanup thread
 threading.Thread(target=delete_expired_pages, daemon=True).start()
 
+def get_freemode_status():
+    try:
+        with open('freemode.json', 'r') as f:
+            data = json.load(f)
+            return data.get('freemode', 'off').lower() == 'on'
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
 @app.route("/generate", methods=["POST"])
 def generate():
     response = requests.get(KEY_API_URL)
@@ -1544,11 +1552,18 @@ def generate():
         temp_pages[temp_path] = {"key": key, "expiry": expiry_time}
         save_temp_pages(temp_pages)
 
-    temp_url = f"https://netflix-me7b.onrender.com/{temp_path}"
+    temp_url = f"https://netflix-7clx.onrender.com/{temp_path}"
 
-    gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
-    gp_response = requests.get(gp_link_api)
-    short_url = gp_response.json().get("shortenedUrl", temp_url) if gp_response.status_code == 200 else temp_url
+    # Check freemode status
+    if get_freemode_status():
+        short_url = temp_url
+    else:
+        gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
+        gp_response = requests.get(gp_link_api)
+        if gp_response.status_code == 200:
+            short_url = gp_response.json().get("shortenedUrl", temp_url)
+        else:
+            short_url = temp_url
 
     return jsonify({"temp_url": temp_url, "short_url": short_url})
     
@@ -1563,6 +1578,44 @@ def temp_page(temp_id):
             return render_template("404.html"), 404  # Return 404 for expired pages
 
     return render_template("temp_page.html", key=temp_data["key"])
+
+@app.route('/toggle_freemode', methods=['POST'])
+def toggle_freemode():
+    if 'admin_logged_in' not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    try:
+        # Create file if not exists
+        if not os.path.exists('freemode.json'):
+            with open('freemode.json', 'w') as f:
+                json.dump({"freemode": "off"}, f)
+
+        with open('freemode.json', 'r+') as f:
+            data = json.load(f)
+            data['freemode'] = 'on' if data.get('freemode', 'off') == 'off' else 'off'
+            f.seek(0)
+            json.dump(data, f, indent=4)
+            f.truncate()
+
+        return jsonify({
+            "message": f"Freemode {'activated' if data['freemode'] == 'on' else 'deactivated'}",
+            "freemode": data['freemode']
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Error: {str(e)}"}), 500
+
+@app.route('/freemode_status', methods=['GET'])
+def freemode_status():
+    try:
+        if not os.path.exists('freemode.json'):
+            return jsonify({"freemode": "off"})
+            
+        with open('freemode.json', 'r') as f:
+            data = json.load(f)
+            return jsonify({"freemode": data.get('freemode', 'off')})
+    except:
+        return jsonify({"freemode": "off"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
