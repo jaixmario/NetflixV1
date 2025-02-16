@@ -131,6 +131,15 @@
             margin-bottom: 0.25rem;
             font-size: 0.9em;
         }
+       /* Freemode button states */
+.freemode-on {
+    background-color: #198754 !important;
+    border-color: #157347 !important;
+}
+.freemode-off {
+    background-color: #dc3545 !important;
+    border-color: #bb2d3b !important;
+}
     </style>
 </head>
 <body>
@@ -208,6 +217,15 @@
             </button>
         </div>
     </div>
+    
+    
+    <div class="card shadow-sm mt-3">
+    <div class="d-grid gap-2">
+        <button id="freemodeToggleBtn" class="btn freemode-off">
+            <i class="fas fa-toggle-off"></i> Turn On Free Mode
+        </button>
+    </div>
+</div>
 
     <!-- Result Message Display -->
     <div id="resultMessage" class="text-center mt-3"></div>
@@ -235,59 +253,114 @@
             }
         });
 
-        // Lockdown Toggle Handler
-        document.getElementById("lockdownToggleBtn").addEventListener("click", async function () {  
-            const resultMessage = document.getElementById("resultMessage");  
-            resultMessage.innerHTML = "";
+       
+// Lockdown Toggle Handler
+document.getElementById("lockdownToggleBtn").addEventListener("click", async function () {
+    const resultMessage = document.getElementById("resultMessage");
+    resultMessage.innerHTML = "";
 
-            try {  
-                const response = await fetch("/toggle_lockdown", { method: "POST" });  
-                const result = await response.json();  
+    try {
+        const response = await fetch("/toggle_lockdown", { method: "POST" });
+        const result = await response.json();
 
-                if (response.ok) {  
-                    const currentState = result.lockdown;
+        if (response.ok) {
+            const currentState = result.lockdown;
+            if (currentState === "on") {
+                this.classList.remove("lockdown-off");
+                this.classList.add("lockdown-on");
+                this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
+            } else {
+                this.classList.remove("lockdown-on");
+                this.classList.add("lockdown-off");
+                this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+            }
+            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+        } else {
+            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+        }
+    } catch (error) {
+        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle lockdown. Please try again.</div>`;
+    }
+});
 
-                    if (currentState === "on") {  
-                        this.classList.remove("lockdown-off");  
-                        this.classList.add("lockdown-on");  
-                        this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;  
-                    } else {  
-                        this.classList.remove("lockdown-on");  
-                        this.classList.add("lockdown-off");  
-                        this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;  
-                    }  
+// Initialize lockdown state on page load
+(async function initializeLockdownState() {
+    try {
+        const response = await fetch("/lockdown_status");
+        const result = await response.json();
 
-                    resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;  
-                } else {  
-                    resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;  
-                }  
-            } catch (error) {  
-                resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle lockdown. Please try again.</div>`;  
-            }  
-        });  
+        if (response.ok) {
+            const button = document.getElementById("lockdownToggleBtn");
+            const currentState = result.lockdown;
+            if (currentState === "on") {
+                button.classList.add("lockdown-on");
+                button.classList.remove("lockdown-off");
+                button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
+            } else {
+                button.classList.add("lockdown-off");
+                button.classList.remove("lockdown-on");
+                button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+            }
+        }
+    } catch (error) {
+        console.error("Error initializing lockdown state:", error);
+    }
+})();
 
-        // Initialize button state on page load  
-        (async function initializeLockdownState() {  
-            try {  
-                const response = await fetch("/lockdown_status");  
-                const result = await response.json();  
+        
 
-                if (response.ok) {  
-                    const button = document.getElementById("lockdownToggleBtn");  
-                    const currentState = result.lockdown;
+// Freemode Toggle Handler
+document.getElementById("freemodeToggleBtn").addEventListener("click", async function () {
+    const resultMessage = document.getElementById("resultMessage");
+    resultMessage.innerHTML = "";
 
-                    if (currentState === "on") {  
-                        button.classList.add("lockdown-on");  
-                        button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;  
-                    } else {  
-                        button.classList.add("lockdown-off");  
-                        button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;  
-                    }  
-                }  
-            } catch (error) {  
-                console.error("Error initializing lockdown state:", error);  
-            }  
-        })();  
+    try {
+        const response = await fetch("/toggle_freemode", { method: "POST" });
+        const result = await response.json();
+
+        if (response.ok) {
+            const currentState = result.freemode;
+            if (currentState === "on") {
+                this.classList.remove("freemode-off");
+                this.classList.add("freemode-on");
+                this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
+            } else {
+                this.classList.remove("freemode-on");
+                this.classList.add("freemode-off");
+                this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
+            }
+            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+        } else {
+            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+        }
+    } catch (error) {
+        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle free mode. Please try again.</div>`;
+    }
+});
+
+// Initialize freemode state on page load
+(async function initializeFreemodeState() {
+    try {
+        const response = await fetch("/freemode_status");
+        const result = await response.json();
+
+        if (response.ok) {
+            const button = document.getElementById("freemodeToggleBtn");
+            const currentState = result.freemode;
+            if (currentState === "on") {
+                button.classList.add("freemode-on");
+                button.classList.remove("freemode-off");
+                button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
+            } else {
+                button.classList.add("freemode-off");
+                button.classList.remove("freemode-on");
+                button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
+            }
+        }
+    } catch (error) {
+        console.error("Error initializing freemode state:", error);
+    }
+})();
     </script>
 </body>
 </html>
