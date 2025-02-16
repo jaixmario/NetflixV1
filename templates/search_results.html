@@ -279,54 +279,37 @@
 
     // Handle form submission
 document.getElementById('request-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
+    event.preventDefault();
 
-        // Collect form data
-        const type = document.getElementById('type').value;
-        const name = document.getElementById('name').value;
-        const year = document.getElementById('year').value;
-        const email = document.getElementById('email').value;
-        const comments = document.getElementById('comments').value;
+    const type = document.getElementById('type').value;
+    const name = document.getElementById('name').value;
+    const year = document.getElementById('year').value;
+    const email = document.getElementById('email').value;
+    const comments = document.getElementById('comments').value;
 
-        // Prepare email content
-        const subject = `New Request: ${type} - ${name}`;
-        const body = `Type: ${type}\nName: ${name}\nYear: ${year}\nEmail: ${email}\nComments: ${comments}`;
+    const subject = `New Request: ${type} - ${name}`;
+    const body = `Type: ${type}\nName: ${name}\nYear: ${year}\nEmail: ${email}\nComments: ${comments}`;
 
-        try {
-            // Send email via backend
-            const response = await fetch('/send_email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recipient: email, // You can also set a fixed recipient if needed
-                    subject: subject,
-                    body: body,
-                }),
-            });
+    try {
+        const response = await fetch('/send_email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipient: email, subject: subject, body: body }),
+        });
 
-            const result = await response.json();
-            const messageElement = document.getElementById('requestMessage');
+        const result = await response.json();
 
-            if (response.ok) {
-    messageElement.textContent = "Your request has been sent successfully!";
-    messageElement.style.color = "green";
-    document.getElementById('request-form').reset(); // Clear the form
-
-    // Redirect to the home page after 2 seconds
-    setTimeout(() => {
-        window.location.href = '/';
-    }, 2000);
-            } else {
-                messageElement.textContent = result.error || "Failed to send your request.";
-                messageElement.style.color = "red";
-            }
-        } catch (error) {
-            console.error("Error submitting the request:", error);
-            const messageElement = document.getElementById('requestMessage');
-            messageElement.textContent = "An error occurred. Please try again.";
-            messageElement.style.color = "red";
+        if (response.ok) {
+            document.getElementById('request-form').reset();
+            window.location.href = '/?toast=success';
+        } else {
+            window.location.href = '/?toast=error';
         }
-    });
+    } catch (error) {
+        console.error("Error submitting the request:", error);
+        window.location.href = '/?toast=error';
+    }
+});
 
     // Close the modal when clicking outside the modal content
     window.onclick = function (event) {
@@ -335,6 +318,8 @@ document.getElementById('request-form').addEventListener('submit', async (event)
             closeRequestPopup();
         }
     };
+    
+    
 </script>
 
 </body>

@@ -245,15 +245,24 @@ function showToast(message) {
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const activationStatus = urlParams.get('activation');
-    
+    const toastStatus = urlParams.get('toast');  // Get toast parameter
+
     if (activationStatus === 'success') {
         showToast('Key activation successful!');
         window.history.replaceState({}, document.title, window.location.pathname);
     } else if (activationStatus === 'error') {
-        // Existing error handling remains
         document.getElementById('apiMessage').textContent = 'Invalid key. Please try again.';
         document.getElementById('apiMessage').style.color = 'red';
         showPopup();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Show toast after form submission
+    if (toastStatus === 'success') {
+        showToast('Your request has been sent successfully!');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (toastStatus === 'error') {
+        showToast('Failed to send your request. Please try again.', 'error');
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 });
@@ -285,6 +294,25 @@ document.addEventListener('DOMContentLoaded', function() {
             freeKeyButton.textContent = 'GET FREE KEY';
         }
     }
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon = toast.querySelector('i');  // Select the existing icon
+    const messageSpan = toast.querySelector('.toast-message');
+
+    messageSpan.textContent = message;
+
+    if (type === 'success') {
+        icon.className = 'fas fa-check-circle';  // Check icon for success
+        toast.style.background = '#4CAF50';      // Green background
+    } else {
+        icon.className = 'fas fa-times-circle';  // Cross icon for error
+        toast.style.background = '#f44336';      // Red background
+    }
+
+    toast.style.display = 'flex';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
     </script>
 </body>
