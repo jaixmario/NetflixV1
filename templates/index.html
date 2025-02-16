@@ -59,7 +59,30 @@
             <p id="apiMessage" class="message"></p>
         </div>
     </div>
-    
+    <!-- Add this after API Key Modal -->
+<div id="progressModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <h3 style="margin-bottom: 15px; color: #fff;">Generating Your Free Key</h3>
+        <div class="progress-steps">
+            <div class="step">
+                <div class="step-icon"><i class="fas fa-key"></i></div>
+                <div class="step-text">Generating Key</div>
+            </div>
+            <div class="step">
+                <div class="step-icon"><i class="fas fa-link"></i></div>
+                <div class="step-text">Creating Temporary Page</div>
+            </div>
+            <div class="step" id="shortenStep">
+                <div class="step-icon"><i class="fas fa-scissors"></i></div>
+                <div class="step-text">Shortening URL</div>
+            </div>
+        </div>
+        <div class="loader-container">
+            <div class="loader"></div>
+            <div class="status-text" id="statusText">Initializing...</div>
+        </div>
+    </div>
+</div>
     
     <!-- Success Modal -->
 <!-- Remove the existing success modal -->
@@ -269,30 +292,51 @@ document.addEventListener('DOMContentLoaded', function() {
         
         async function getFreeKey() {
     const freeKeyButton = document.getElementById('freeKeyButton');
-    try {
-        // Disable button immediately
-        freeKeyButton.disabled = true;
-        freeKeyButton.textContent = 'please wait....';
+    const progressModal = document.getElementById('progressModal');
+    const steps = document.querySelectorAll('.step');
+    const statusText = document.getElementById('statusText');
+    const shortenStep = document.getElementById('shortenStep');
 
-        // Make API request
+    try {
+        // Initial setup
+        freeKeyButton.disabled = true;
+        freeKeyButton.textContent = 'Please wait...';
+        progressModal.style.display = 'block';
+        steps.forEach(step => step.classList.remove('active'));
+        
+        // Step 1: Generating Key
+        steps[0].classList.add('active');
+        statusText.textContent = "Contacting key server...";
+        
         const response = await fetch("/generate", { method: "POST" });
         const result = await response.json();
+        
+        // Step 2: Creating Temp Page
+        steps[1].classList.add('active');
+        statusText.textContent = "Creating temporary access page...";
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-        if (result.short_url) {
-            // Redirect to the short URL in current tab
-            window.location.href = result.short_url;
+        // Step 3: Shortening URL (if needed)
+        if (!result.freemode) {
+            shortenStep.classList.add('active');
+            statusText.textContent = "Securing shortened URL...";
+            await new Promise(resolve => setTimeout(resolve, 1500));
         } else {
-            alert("Error generating free key. Try again later.");
+            shortenStep.style.display = 'none';
         }
+
+        // Completion
+        statusText.textContent = "Redirecting to your key...";
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        window.location.href = result.short_url;
+
     } catch (error) {
-        alert("An error occurred. Please try again.");
+        progressModal.style.display = 'none';
+        freeKeyButton.disabled = false;
+        freeKeyButton.textContent = 'GET FREE KEY';
+        showToast('Failed to generate key. Please try again.', 'error');
         console.error(error);
-    } finally {
-        // Only re-enable if redirect failed
-        if (!window.location.href.includes(result?.short_url)) {
-            freeKeyButton.disabled = false;
-            freeKeyButton.textContent = 'GET FREE KEY';
-        }
     }
 }
 
