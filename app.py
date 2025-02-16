@@ -1537,33 +1537,47 @@ def get_freemode_status():
 
 @app.route("/generate", methods=["POST"])
 def generate():
-    response = requests.get(KEY_API_URL)
-    if response.status_code != 200:
-        return jsonify({"error": "Failed to fetch key"}), 500
+    try:
+        # Step 1: Generate key
+        response = requests.get(KEY_API_URL)
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch key"}), 500
 
-    key_data = response.json()
-    key = key_data.get("key", "No Key Found")
+        key_data = response.json()
+        key = key_data.get("key", "No Key Found")
 
-    temp_path = generate_random_path()
-    expiry_time = time.time() + 600  # 10 minutes from now
+        # Step 2: Create temporary page
+        temp_path = generate_random_path()
+        expiry_time = time.time() + 600  # 10 minutes
 
-    with temp_pages_lock:
-        temp_pages = load_temp_pages()
-        temp_pages[temp_path] = {"key": key, "expiry": expiry_time}
-        save_temp_pages(temp_pages)
+        with temp_pages_lock:
+            temp_pages = load_temp_pages()
+            temp_pages[temp_path] = {"key": key, "expiry": expiry_time}
+            save_temp_pages(temp_pages)
 
-    temp_url = f"https://netflix-7clx.onrender.com/{temp_path}"
+        temp_url = f"https://netflix-7clx.onrender.com/{temp_path}"
+        freemode_active = get_freemode_status()
 
-    # Check freemode status
-    if get_freemode_status():
+        # Step 3: Shorten URL if needed
         short_url = temp_url
-    else:
-        gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
-        gp_response = requests.get(gp_link_api)
-        if gp_response.status_code == 200:
-            short_url = gp_response.json().get("shortenedUrl", temp_url)
-        else:
-            short_url = temp_url
+        if not freemode_active:
+            try:
+                gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
+                gp_response = requests.get(gp_link_api, timeout=10)
+                if gp_response.status_code == 200:
+                    short_url = gp_response.json().get("shortenedUrl", temp_url)
+            except requests.exceptions.RequestException as e:
+                app.logger.error(f"URL shortening failed: {str(e)}")
+
+        return jsonify({
+            "temp_url": temp_url,
+            "short_url": short_url,
+            "freemode": freemode_active
+        })
+
+    except Exception as e:
+        app.logger.error(f"Key generation failed: {str(e)}")
+        return jsonify({"error": "Key generation process failed"}), 500
 
     return jsonify({"temp_url": temp_url, "short_url": short_url})
     
