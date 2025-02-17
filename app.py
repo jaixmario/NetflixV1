@@ -1563,7 +1563,7 @@ def generate():
         if not freemode_active:
             try:
                 gp_link_api = f"https://api.gplinks.com/api?api={GP_API_KEY}&url={temp_url}"
-                gp_response = requests.get(gp_link_api, timeout=10)
+                gp_response = requests.get(gp_link_api, timeout=30)
                 if gp_response.status_code == 200:
                     short_url = gp_response.json().get("shortenedUrl", temp_url)
             except requests.exceptions.RequestException as e:
