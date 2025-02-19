@@ -88,19 +88,26 @@ def login_required(func):
 @login_required
 def get_file_metadata(file_id):
     try:
+        # Determine which token file to use
+        if file_id.startswith("MARIO"):
+            actual_file_id = file_id[5:]  # Remove "MARIO" prefix
+            token_file = 'user_token2.json'
+        else:
+            actual_file_id = file_id
+            token_file = 'user_token.json'
+
         # Get a valid access token
-        access_token = get_valid_token()
+        access_token = get_valid_token(token_file)
 
         # Fetch file metadata from Microsoft Graph API
-        url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}"
+        url = f"https://graph.microsoft.com/v1.0/me/drive/items/{actual_file_id}"
         headers = {"Authorization": f"Bearer {access_token}"}
         response = requests.get(url, headers=headers)
 
         if response.status_code == 200:
             metadata = response.json()
-            # Extract file size (in bytes)
             file_size = metadata.get('size', 0)
-            return jsonify({"file_size": file_size}), 200
+            return jsonify({"file_size": file_size, "source": token_file}), 200
         else:
             return jsonify({"error": "Failed to fetch file metadata"}), response.status_code
     except Exception as e:
@@ -145,7 +152,7 @@ def lockdown():
 @app.before_request
 def check_lockdown():
     # Skip lockdown for specific routes
-    if request.path in ['/toggle_lockdown', '/lockdown', '/admin', '/admin/home', '/lockdown_status', '/freemode_status', '/toggle_freemode']:
+    if request.path in ['/toggle_lockdown', '/lockdown', '/admin', '/admin/home', '/lockdown_status', '/freemode_status', '/toggle_freemode', '/get_storage_info']:
         return
 
     # Read lockdown status
@@ -260,6 +267,44 @@ def validate_key():
         # Use the error message from API
         return jsonify({'message': error_message or 'Key validation failed'}), 401
 
+
+@app.route('/get_storage_info', methods=['GET'])
+def get_storage_info():
+    try:
+        # Read lockdown status
+        with open('lockdown.json', 'r') as f:
+            lockdown_data = json.load(f)
+
+        lockdown_active = lockdown_data.get("lockdown") == "on"
+
+        # If lockdown is active and user is not admin, redirect to /lockdown
+        if lockdown_active and 'admin_logged_in' not in session:
+            return redirect(url_for('lockdown'))
+
+        # If lockdown is not active and user is not admin, show 404 page
+        if 'admin_logged_in' not in session:
+            return render_template('404.html'), 404
+
+        # Proceed to fetch storage info for admins
+        server = request.args.get('server', '1')
+        token_file = 'user_token.json' if server == '1' else 'user_token2.json'
+        access_token = get_valid_token(token_file)
+        headers = {"Authorization": f"Bearer {access_token}"}
+        url = "https://graph.microsoft.com/v1.0/me/drive"
+
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify({
+                "used_bytes": data['quota']['used'],
+                "total_bytes": data['quota']['total']
+            })
+        else:
+            return render_template('error.html', error="Failed to fetch storage data"), response.status_code
+
+    except Exception as e:
+        return render_template('error.html', error=str(e)), 500
+        
 @app.route('/replace_backup', methods=['POST'])
 def replace_backup():
     try:
@@ -468,6 +513,36 @@ def upload_user_token():
     else:
         return redirect(url_for('admin_login'))
 
+@app.route('/upload_user_token2', methods=['POST'])
+def upload_user_token2():
+    if 'admin_logged_in' in session:
+        # Check if the uploaded file is present
+        if 'user_token2' not in request.files:
+            flash("No file uploaded", "error")
+            return redirect(url_for('home'))
+        
+        file = request.files['user_token2']
+
+        # Ensure the uploaded file is named 'data.json'
+        if file.filename != 'user_token2.json':
+            flash("Please upload a file named user_token2.json", "error")
+            return redirect(url_for('home'))
+
+        # Define the path to save data.json
+        file_path = os.path.join(app.root_path, 'user_token2.json')
+
+        # If data.json already exists, remove it
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # Save the new file
+        file.save(file_path)
+        flash("user_token2.json uploaded successfully", "success")
+        
+        return redirect(url_for('home'))
+    else:
+        return redirect(url_for('admin_login'))
+
 @app.route('/key/<key>')
 def validate_key_via_url(key):
     # First check the key format
@@ -667,38 +742,43 @@ def refresh_access_token():
     else:
         raise Exception("Failed to refresh access token")
 
-def get_valid_token():
-    with open('user_token.json') as f:
-        token_data = json.load(f)
-    
-    if token_data['expires_at'] < int(time.time()) + 120:
-        # Check for refresh token availability
-        if 'refresh_token' not in token_data:
-            print("No refresh token available. Prompting user to re-authenticate.")
-            # Trigger re-authentication if needed
-            return redirect(url_for('get_token'))
+def get_valid_token(token_file='user_token.json'):
+    """Retrieve a valid access token from the specified token file."""
+    try:
+        with open(token_file) as f:
+            token_data = json.load(f)
         
-        # Refresh the token if possible
-        payload = {
-            'grant_type': 'refresh_token',
-            'client_id': CLIENT_ID,
-            'scope': SCOPES,
-            'refresh_token': token_data['refresh_token']
-        }
-        response = requests.post(TOKEN_URL, data=payload)
-        new_token_data = response.json()
-        
-        if 'access_token' in new_token_data:
-            # Update expiration and save
+        # Check if token is expired or about to expire
+        if token_data['expires_at'] < int(time.time()) + 120:
+            # Refresh token logic
+            refresh_token = token_data.get('refresh_token')
+            if not refresh_token:
+                raise Exception(f"No refresh token in {token_file}")
+
+            payload = {
+                'grant_type': 'refresh_token',
+                'client_id': CLIENT_ID,
+                'scope': SCOPES,
+                'refresh_token': refresh_token
+            }
+            response = requests.post(TOKEN_URL, data=payload)
+            new_token_data = response.json()
+
+            if 'access_token' not in new_token_data:
+                raise Exception("Failed to refresh token")
+
+            # Update expiration time and save to the same token file
             new_token_data['expires_at'] = int(time.time()) + new_token_data.get('expires_in', 0)
-            with open('user_token.json', 'w') as token_file:
-                json.dump(new_token_data, token_file)
+            with open(token_file, 'w') as f:
+                json.dump(new_token_data, f, indent=4)
+            
             return new_token_data['access_token']
         else:
-            print("Failed to refresh token. Prompting user to re-authenticate.")
-            return redirect(url_for('get_token'))
-    else:
-        return token_data['access_token']
+            return token_data['access_token']
+    
+    except Exception as e:
+        print(f"Error in {token_file}: {str(e)}")
+        return None
 
 def get_existing_link(file_id, access_token):
     """Fetch existing shareable link if it exists."""
@@ -715,48 +795,44 @@ def get_existing_link(file_id, access_token):
                 return permission['link']['webUrl']
     return None
 
-def get_onedrive_business_link(file_id, retry_count=3):
+def get_onedrive_business_link(file_id, token_file='user_token.json', retry_count=3):
+    """Generate a OneDrive link using the specified token file."""
     try:
-        # Attempt to retrieve a valid token
-        access_token = get_valid_token()
+        access_token = get_valid_token(token_file)
+        if not access_token:
+            return None
 
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {access_token}"}
         create_link_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/createLink"
-        body = {
-            "type": "view",
-            "scope": "anonymous"
-        }
+        body = {"type": "view", "scope": "anonymous"}
 
-        for attempt in range(retry_count):
-            # Try to create a new link
-            response = requests.post(create_link_url, headers=headers, json=body)
-            
-            if response.status_code == 200:
-                data = response.json()
-                return data['link']['webUrl']
-
-            # If creation failed, try fetching an existing link
-            existing_link = get_existing_link(file_id, access_token)
-            if existing_link:
-                return existing_link
-
-            # Optional: wait before retrying (useful if API is throttling)
-            time.sleep(2)
-
-        # If all attempts fail, return None
-        return None
+        # Try to create a new link
+        response = requests.post(create_link_url, headers=headers, json=body)
+        if response.status_code == 200:
+            return response.json()['link']['webUrl']
+        
+        # Fallback: Check existing links
+        existing_link = get_existing_link(file_id, access_token)
+        return existing_link
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error generating link: {str(e)}")
         return None
 
 @app.route('/get_onedrive_link/<file_id>')
 @login_required
 def get_onedrive_link(file_id):
-    link = get_onedrive_business_link(file_id)
+    # Check if the file_id starts with "MARIO"
+    if file_id.startswith("MARIO"):
+        actual_file_id = file_id[5:]  # Remove "MARIO" (5 characters)
+        token_file = 'user_token2.json'
+    else:
+        actual_file_id = file_id
+        token_file = 'user_token.json'
+    
+    # Generate the link with the correct token
+    link = get_onedrive_business_link(actual_file_id, token_file)
+    
     if link:
         return jsonify({"link": link})
     else:
