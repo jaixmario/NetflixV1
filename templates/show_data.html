@@ -211,15 +211,23 @@
         </div>
     {% elif data.type == 'tv' %}
         <!-- Bulk Input for TV Shows -->
-        <div class="mb-3">
-            <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
-            <textarea id="bulkFileIds" 
-                      class="form-control mb-3" 
-                      placeholder="Example: 01ZDEC6CX2RD0EWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, ..."></textarea>
-            <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">
-                <i class="bi bi-magic"></i> Auto-fill Episodes
-            </button>
-        </div>
+        <!-- Bulk Input for TV Shows -->
+<div class="mb-3">
+    <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
+    <textarea id="bulkFileIds" 
+              class="form-control mb-3" 
+              placeholder="Example: 01ZDEC6CX2RD0EWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, ..."></textarea>
+    
+    <!-- Add Mario Toggle -->
+    <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="marioToggle">
+        <label class="form-check-label" for="marioToggle">Add MARIO prefix to IDs</label>
+    </div>
+    
+    <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">
+        <i class="bi bi-magic"></i> Auto-fill Episodes
+    </button>
+</div>
 
         <!-- Per-Episode Inputs -->
         {% for season in data.seasons %}
@@ -326,14 +334,18 @@ $(document).ready(function() {
 
     // Bulk fill File IDs function
     window.fillEpisodeFileIds = function() {
-        const bulkInput = document.getElementById('bulkFileIds').value;
-        const fileIds = bulkInput.split(',').map(id => id.trim());
-        const inputs = document.querySelectorAll('.episode-file-id');
-        
-        inputs.forEach((input, index) => {
-            input.value = index < fileIds.length ? fileIds[index] : '';
-        });
-    };
+    const bulkInput = document.getElementById('bulkFileIds').value;
+    const addMario = document.getElementById('marioToggle').checked;
+    const fileIds = bulkInput.split(',').map(id => {
+        let cleanId = id.trim();
+        return addMario ? 'MARIO' + cleanId : cleanId;
+    });
+    
+    const inputs = document.querySelectorAll('.episode-file-id');
+    inputs.forEach((input, index) => {
+        input.value = index < fileIds.length ? fileIds[index] : '';
+    });
+};
 
     // Auto-close modal after successful save
     $(document).on('ajax:success', function() {

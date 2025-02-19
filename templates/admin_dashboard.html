@@ -24,7 +24,7 @@
             border: none;
             border-radius: 10px;
             margin: 20px auto;
-            padding: 20px;
+            padding: 15px; /* Reduced padding */
             max-width: 500px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             animation: fadeInUp 0.6s ease-in-out;
@@ -140,11 +140,47 @@
     background-color: #dc3545 !important;
     border-color: #bb2d3b !important;
 }
+
+.storage-card {
+    padding: 10px; /* Reduce padding */
+    margin: 5px auto; /* Reduce margin */
+}
+
+.storage-card .card-body {
+    padding: 10px; /* Reduce inner padding */
+}
+
+.storage-card h5 {
+    font-size: 1rem; /* Reduce title size */
+    margin-bottom: 5px; /* Reduce bottom margin */
+}
+
+.storage-card .progress {
+    height: 15px; /* Reduce progress bar height */
+}
+
+.storage-card p {
+    font-size: 0.85rem; /* Reduce text size */
+    margin-top: 5px; /* Reduce spacing */
+}
+.storage-card {
+    margin-bottom: 15px; /* Add spacing between cards */
+}
+.progress {
+    background-color: #2c2c2c;
+    border-radius: 10px;
+}
+
+/* Error message styling */
+.storage-error {
+    color: #dc3545 !important;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
     </style>
 </head>
 <body>
     <h1>CONTROL PANEL</h1>
-
     <!-- IMDb Fetch Form -->
     <div class="card shadow-sm">
         <form action="/fetch" method="POST">
@@ -156,7 +192,34 @@
         </form>
     </div>
 
-    <!-- Upload Sections -->
+    <!-- Storage Cards -->
+    <div class="card storage-card shadow-sm text-center">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-hdd"></i> Server 1 Storage</h5>
+            <div class="progress mt-3" style="height: 20px;">
+                <div id="storageBar1" class="progress-bar bg-success" role="progressbar" 
+                     style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    0%
+                </div>
+            </div>
+            <p id="storageStatus1" class="mt-2 text-light">Fetching storage info...</p>
+        </div>
+    </div>
+
+    <div class="card storage-card shadow-sm text-center">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-hdd"></i> Server 2 Storage</h5>
+            <div class="progress mt-3" style="height: 20px;">
+                <div id="storageBar2" class="progress-bar bg-warning" role="progressbar" 
+                     style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    0%
+                </div>
+            </div>
+            <p id="storageStatus2" class="mt-2 text-light">Fetching storage info...</p>
+        </div>
+    </div>
+
+    <!-- Upload and Download Forms -->
     <div class="card shadow-sm mt-3">
         <form action="/upload_data" method="POST" enctype="multipart/form-data">
             <div class="mb-3">
@@ -179,6 +242,19 @@
             </div>
             <button type="submit" class="btn btn-warning">
                 <i class="fas fa-upload"></i> Upload user_token.json
+            </button>
+        </form>
+    </div>
+    
+    <div class="card shadow-sm mt-3">
+        <form action="/upload_user_token2" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="user_token2" class="form-label">Upload user_token2.json:</label>
+                <input type="file" id="user_token2" name="user_token2" 
+                       accept=".json" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-warning">
+                <i class="fas fa-upload"></i> Upload user_token.json2
             </button>
         </form>
     </div>
@@ -218,14 +294,13 @@
         </div>
     </div>
     
-    
     <div class="card shadow-sm mt-3">
-    <div class="d-grid gap-2">
-        <button id="freemodeToggleBtn" class="btn freemode-off">
-            <i class="fas fa-toggle-off"></i> Turn On Free Mode
-        </button>
+        <div class="d-grid gap-2">
+            <button id="freemodeToggleBtn" class="btn freemode-off">
+                <i class="fas fa-toggle-off"></i> Turn On Free Mode
+            </button>
+        </div>
     </div>
-</div>
 
     <!-- Result Message Display -->
     <div id="resultMessage" class="text-center mt-3"></div>
@@ -253,114 +328,189 @@
             }
         });
 
-       
-// Lockdown Toggle Handler
-document.getElementById("lockdownToggleBtn").addEventListener("click", async function () {
-    const resultMessage = document.getElementById("resultMessage");
-    resultMessage.innerHTML = "";
+        // Lockdown Toggle Handler
+        document.getElementById("lockdownToggleBtn").addEventListener("click", async function () {
+            const resultMessage = document.getElementById("resultMessage");
+            resultMessage.innerHTML = "";
 
-    try {
-        const response = await fetch("/toggle_lockdown", { method: "POST" });
-        const result = await response.json();
+            try {
+                const response = await fetch("/toggle_lockdown", { method: "POST" });
+                const result = await response.json();
 
-        if (response.ok) {
-            const currentState = result.lockdown;
-            if (currentState === "on") {
-                this.classList.remove("lockdown-off");
-                this.classList.add("lockdown-on");
-                this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
-            } else {
-                this.classList.remove("lockdown-on");
-                this.classList.add("lockdown-off");
-                this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+                if (response.ok) {
+                    const currentState = result.lockdown;
+                    if (currentState === "on") {
+                        this.classList.remove("lockdown-off");
+                        this.classList.add("lockdown-on");
+                        this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
+                    } else {
+                        this.classList.remove("lockdown-on");
+                        this.classList.add("lockdown-off");
+                        this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+                    }
+                    resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                } else {
+                    resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (error) {
+                resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle lockdown. Please try again.</div>`;
             }
-            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-        } else {
-            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
-        }
-    } catch (error) {
-        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle lockdown. Please try again.</div>`;
-    }
-});
+        });
 
-// Initialize lockdown state on page load
-(async function initializeLockdownState() {
-    try {
-        const response = await fetch("/lockdown_status");
-        const result = await response.json();
+        // Initialize lockdown state on page load
+        (async function initializeLockdownState() {
+            try {
+                const response = await fetch("/lockdown_status");
+                const result = await response.json();
 
-        if (response.ok) {
-            const button = document.getElementById("lockdownToggleBtn");
-            const currentState = result.lockdown;
-            if (currentState === "on") {
-                button.classList.add("lockdown-on");
-                button.classList.remove("lockdown-off");
-                button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
-            } else {
-                button.classList.add("lockdown-off");
-                button.classList.remove("lockdown-on");
-                button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+                if (response.ok) {
+                    const button = document.getElementById("lockdownToggleBtn");
+                    const currentState = result.lockdown;
+                    if (currentState === "on") {
+                        button.classList.add("lockdown-on");
+                        button.classList.remove("lockdown-off");
+                        button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Lockdown`;
+                    } else {
+                        button.classList.add("lockdown-off");
+                        button.classList.remove("lockdown-on");
+                        button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Lockdown`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error initializing lockdown state:", error);
+            }
+        })();
+
+        // Freemode Toggle Handler
+        document.getElementById("freemodeToggleBtn").addEventListener("click", async function () {
+            const resultMessage = document.getElementById("resultMessage");
+            resultMessage.innerHTML = "";
+
+            try {
+                const response = await fetch("/toggle_freemode", { method: "POST" });
+                const result = await response.json();
+
+                if (response.ok) {
+                    const currentState = result.freemode;
+                    if (currentState === "on") {
+                        this.classList.remove("freemode-off");
+                        this.classList.add("freemode-on");
+                        this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
+                    } else {
+                        this.classList.remove("freemode-on");
+                        this.classList.add("freemode-off");
+                        this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
+                    }
+                    resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                } else {
+                    resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (error) {
+                resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle free mode. Please try again.</div>`;
+            }
+        });
+
+        // Initialize freemode state on page load
+        (async function initializeFreemodeState() {
+            try {
+                const response = await fetch("/freemode_status");
+                const result = await response.json();
+
+                if (response.ok) {
+                    const button = document.getElementById("freemodeToggleBtn");
+                    const currentState = result.freemode;
+                    if (currentState === "on") {
+                        button.classList.add("freemode-on");
+                        button.classList.remove("freemode-off");
+                        button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
+                    } else {
+                        button.classList.add("freemode-off");
+                        button.classList.remove("freemode-on");
+                        button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error initializing freemode state:", error);
+            }
+        })();
+
+        async function updateStorageStatus() {
+            try {
+                // Fetch Server 1 storage info
+                const response1 = await fetch('/get_storage_info?server=1');
+                const data1 = await response1.json();
+                updateStorageUI(1, data1);
+
+                // Fetch Server 2 storage info
+                const response2 = await fetch('/get_storage_info?server=2');
+                const data2 = await response2.json();
+                updateStorageUI(2, data2);
+            } catch (error) {
+                console.error("Failed to fetch storage info:", error);
             }
         }
-    } catch (error) {
-        console.error("Error initializing lockdown state:", error);
-    }
-})();
 
+        function formatStorage(usedBytes, totalBytes) {
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let unitIndex = 0;
+
+            // Determine the largest unit for the total
+            let tempTotal = totalBytes;
+            while (tempTotal >= 1024 && unitIndex < units.length - 1) {
+                tempTotal /= 1024;
+                unitIndex++;
+            }
+
+            // Convert both used and total to the determined unit
+            const used = usedBytes / Math.pow(1024, unitIndex);
+            const total = totalBytes / Math.pow(1024, unitIndex);
+            
+            return {
+                used: used.toFixed(2),
+                total: total.toFixed(2),
+                unit: units[unitIndex]
+            };
+        }
+
+        function updateStorageUI(serverNumber, data) {
+    const resultElement = document.getElementById(`storageStatus${serverNumber}`);
+    const barElement = document.getElementById(`storageBar${serverNumber}`);
+
+    // Reset classes
+    resultElement.classList.remove('storage-error', 'text-light');
+    resultElement.classList.add('text-light');
+
+    if (data.used_bytes && data.total_bytes) {
+        const used = parseFloat(data.used_bytes);
+        const total = parseFloat(data.total_bytes);
+        const percentage = ((used / total) * 100).toFixed(1);
+
+        // Format storage values
+        const formatted = formatStorage(used, total);
+        resultElement.innerHTML = `<i class="fas fa-circle text-success"></i> ${formatted.used} ${formatted.unit} / ${formatted.total} ${formatted.unit}`;
         
-
-// Freemode Toggle Handler
-document.getElementById("freemodeToggleBtn").addEventListener("click", async function () {
-    const resultMessage = document.getElementById("resultMessage");
-    resultMessage.innerHTML = "";
-
-    try {
-        const response = await fetch("/toggle_freemode", { method: "POST" });
-        const result = await response.json();
-
-        if (response.ok) {
-            const currentState = result.freemode;
-            if (currentState === "on") {
-                this.classList.remove("freemode-off");
-                this.classList.add("freemode-on");
-                this.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
-            } else {
-                this.classList.remove("freemode-on");
-                this.classList.add("freemode-off");
-                this.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
-            }
-            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-        } else {
-            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
-        }
-    } catch (error) {
-        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle free mode. Please try again.</div>`;
+        // Update progress bar
+        barElement.style.width = `${percentage}%`;
+        barElement.textContent = `${percentage}%`;
+        
+        // Update bar color
+        barElement.className = 'progress-bar';
+        if (percentage > 90) barElement.classList.add('bg-danger');
+        else if (percentage > 70) barElement.classList.add('bg-warning');
+        else barElement.classList.add('bg-success');
+    } else {
+        resultElement.classList.remove('text-light');
+        resultElement.classList.add('storage-error');
+        resultElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error fetching storage data`;
+        
+        barElement.className = 'progress-bar bg-danger';
+        barElement.style.width = '100%';
+        barElement.textContent = 'Error';
     }
-});
+}
 
-// Initialize freemode state on page load
-(async function initializeFreemodeState() {
-    try {
-        const response = await fetch("/freemode_status");
-        const result = await response.json();
-
-        if (response.ok) {
-            const button = document.getElementById("freemodeToggleBtn");
-            const currentState = result.freemode;
-            if (currentState === "on") {
-                button.classList.add("freemode-on");
-                button.classList.remove("freemode-off");
-                button.innerHTML = `<i class="fas fa-toggle-on"></i> Turn Off Free Mode`;
-            } else {
-                button.classList.add("freemode-off");
-                button.classList.remove("freemode-on");
-                button.innerHTML = `<i class="fas fa-toggle-off"></i> Turn On Free Mode`;
-            }
-        }
-    } catch (error) {
-        console.error("Error initializing freemode state:", error);
-    }
-})();
+        // Call function on page load
+        updateStorageStatus();
     </script>
 </body>
 </html>
