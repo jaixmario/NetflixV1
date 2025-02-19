@@ -77,7 +77,10 @@
                 <p><strong>Trailer:</strong> <a href="{{ data.trailer }}" target="_blank">Watch Trailer</a></p>
             </div>
         </div>
-
+<div class="form-check form-switch mb-3">
+    <input class="form-check-input" type="checkbox" id="addMarioSwitch">
+    <label class="form-check-label" for="addMarioSwitch">Add "MARIO" to File ID</label>
+</div>
         <!-- Button to trigger advanced edit modal -->
         <!-- Button to trigger advanced edit modal -->
 <button type="button" class="btn btn-secondary mt-4" data-bs-toggle="modal" data-bs-target="#advancedEditModal">
@@ -211,23 +214,15 @@
         </div>
     {% elif data.type == 'tv' %}
         <!-- Bulk Input for TV Shows -->
-        <!-- Bulk Input for TV Shows -->
-<div class="mb-3">
-    <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
-    <textarea id="bulkFileIds" 
-              class="form-control mb-3" 
-              placeholder="Example: 01ZDEC6CX2RD0EWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, ..."></textarea>
-    
-    <!-- Add Mario Toggle -->
-    <div class="form-check form-switch mb-3">
-        <input class="form-check-input" type="checkbox" role="switch" id="marioToggle">
-        <label class="form-check-label" for="marioToggle">Add MARIO prefix to IDs</label>
-    </div>
-    
-    <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">
-        <i class="bi bi-magic"></i> Auto-fill Episodes
-    </button>
-</div>
+        <div class="mb-3">
+            <label for="bulkFileIds" class="form-label">Bulk Add File IDs (comma-separated):</label>
+            <textarea id="bulkFileIds" 
+                      class="form-control mb-3" 
+                      placeholder="Example: 01ZDEC6CX2RD0EWRY4CBC2SYEYKXMWUJGM, 01ZDEC6CUFC32YZ7A4BNCZOKETVIZNHD4A, ..."></textarea>
+            <button type="button" class="btn btn-secondary mb-3" onclick="fillEpisodeFileIds()">
+                <i class="bi bi-magic"></i> Auto-fill Episodes
+            </button>
+        </div>
 
         <!-- Per-Episode Inputs -->
         {% for season in data.seasons %}
@@ -268,7 +263,7 @@
     <!-- Bootstrap and jQuery (for AJAX) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
+<script>
 $(document).ready(function() {
     // Save Changes function
     function saveChanges(callback) {
@@ -296,62 +291,77 @@ $(document).ready(function() {
         });
     }
 
+    // Save File IDs with MARIO prefix
+    $('form[action="/add_file_ids"]').on('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const addMario = $('#addMarioSwitch').is(':checked'); // Check if toggle is ON
+    
+    saveChanges(function() {
+        const formData = new FormData(form);
+
+        // Modify file IDs based on toggle switch
+        if (addMario) {
+            if (formData.has('file_id')) { // Movie case
+                const movieFileId = formData.get('file_id');
+                if (movieFileId && !movieFileId.startsWith('MARIO')) {
+                    formData.set('file_id', 'MARIO' + movieFileId);
+                }
+            } else { // TV Show case
+                formData.forEach((value, key) => {
+                    if (key.startsWith('file_id_') && value && !value.startsWith('MARIO')) {
+                        formData.set(key, 'MARIO' + value);
+                    }
+                });
+            }
+        }
+
+        // Convert to URL-encoded format
+        const data = new URLSearchParams(formData).toString();
+
+        $.ajax({
+            url: form.action,
+            type: 'POST',
+            data: data,
+            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            success: function(response) {
+                window.location.href = '/admin/home';
+            },
+            error: function(xhr) {
+                let errorMessage = 'Failed to save file IDs.';
+                try {
+                    const res = JSON.parse(xhr.responseText);
+                    errorMessage = res.error || errorMessage;
+                } catch(e) {}
+                $('#message').html('<div class="alert alert-danger">' + errorMessage + '</div>');
+            }
+        });
+    });
+});
+
+    // Bulk fill function
+    window.fillEpisodeFileIds = function() {
+        const bulkInput = document.getElementById('bulkFileIds').value;
+        const fileIds = bulkInput.split(',').map(id => id.trim());
+        const inputs = document.querySelectorAll('.episode-file-id');
+        
+        inputs.forEach((input, index) => {
+            input.value = index < fileIds.length ? fileIds[index] : '';
+        });
+    };
+
     // Save Changes button handler
     $('#saveButton').click(function() {
         saveChanges(function() {
-            // Redirect after save if needed
             window.location.href = '/admin/home';
         });
     });
-
-    // File IDs form submission handler
-    $('form[action="/add_file_ids"]').on('submit', function(e) {
-        e.preventDefault();
-        const form = this;
-        
-        // First save advanced edits
-        saveChanges(function() {
-            // Then submit File IDs form
-            $.ajax({
-                url: form.action,
-                type: 'POST',
-                data: $(form).serialize(),
-                success: function(response) {
-                    // Redirect to admin home after successful save
-                    window.location.href = '/admin/home';
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Failed to save file IDs.';
-                    try {
-                        const res = JSON.parse(xhr.responseText);
-                        errorMessage = res.error || errorMessage;
-                    } catch(e) {}
-                    $('#message').html('<div class="alert alert-danger">' + errorMessage + '</div>');
-                }
-            });
-        });
-    });
-
-    // Bulk fill File IDs function
-    window.fillEpisodeFileIds = function() {
-    const bulkInput = document.getElementById('bulkFileIds').value;
-    const addMario = document.getElementById('marioToggle').checked;
-    const fileIds = bulkInput.split(',').map(id => {
-        let cleanId = id.trim();
-        return addMario ? 'MARIO' + cleanId : cleanId;
-    });
-    
-    const inputs = document.querySelectorAll('.episode-file-id');
-    inputs.forEach((input, index) => {
-        input.value = index < fileIds.length ? fileIds[index] : '';
-    });
-};
 
     // Auto-close modal after successful save
     $(document).on('ajax:success', function() {
         $('#advancedEditModal').modal('hide');
     });
 });
-    </script>
+</script>
 </body>
 </html>
