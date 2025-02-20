@@ -342,7 +342,7 @@ document.getElementById('request-form').addEventListener('submit', async (event)
     const body = `Type: ${type}\nName: ${name}\nYear: ${year}\nEmail: ${email}\nComments: ${comments}`;
 
     try {
-        const response = await fetch('/send_emailh', {
+        const response = await fetch('/send_email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ recipient: email, subject: subject, body: body }),
