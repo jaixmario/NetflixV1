@@ -809,6 +809,14 @@ function updateCharCounter() {
         (remaining < 20 ? ' near-limit' : '') + 
         (remaining < 0 ? ' over-limit' : '');
 }
+
+// Close the report modal when clicking outside the modal content
+window.onclick = function (event) {
+    const reportModal = document.getElementById("reportModal");
+    if (event.target === reportModal) {
+        closeReportModal();
+    }
+};
     </script>
 </body>
 </html>
