@@ -1,1 +1,1 @@
-web: gunicorn Netflix01.wsgi:application
+web: gunicorn app:app
