@@ -1631,7 +1631,7 @@ def generate():
             temp_pages[temp_path] = {"key": key, "expiry": expiry_time}
             save_temp_pages(temp_pages)
 
-        temp_url = f"https://netflix-7clx.onrender.com/{temp_path}"
+        temp_url = f"https://auroraflix.onrender.com/{temp_path}"
         freemode_active = get_freemode_status()
 
         # Step 3: Shorten URL if needed
