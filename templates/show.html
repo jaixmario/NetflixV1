@@ -613,7 +613,7 @@ select.link-input {
         </div>
     </div>
     <script>
-        function getLink(file_id, episodeNumber, episodeName) {
+function getLink(file_id, episodeNumber, episodeName) {
     // Reset file size display immediately
     document.getElementById("fileSize").textContent = "Fetching file size...";
 
@@ -621,7 +621,17 @@ select.link-input {
         .then(response => response.json())
         .then(data => {
             if (data.link) {
-                const downloadUrl = `${data.link}?download=1`;
+                let downloadUrl = data.link;
+                const currentHost = window.location.origin;
+                
+                // Check if it's a direct OneDrive link (not proxy)
+                if (!downloadUrl.startsWith(`${currentHost}/download/`)) {
+                    // Add download parameter if not already present
+                    if (!downloadUrl.includes('?download=1')) {
+                        downloadUrl += downloadUrl.includes('?') ? '&download=1' : '?download=1';
+                    }
+                }
+
                 document.getElementById("linkText").value = downloadUrl;
                 document.getElementById("generatedLink").href = downloadUrl;
 

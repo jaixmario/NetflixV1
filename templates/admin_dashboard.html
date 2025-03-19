@@ -177,6 +177,14 @@
     font-size: 0.9rem;
     margin-top: 5px;
 }
+.proxy-on {
+    background-color: #198754 !important;
+    border-color: #157347 !important;
+}
+.proxy-off {
+    background-color: #dc3545 !important;
+    border-color: #bb2d3b !important;
+}
     </style>
 </head>
 <body>
@@ -301,7 +309,14 @@
             </button>
         </div>
     </div>
-
+<!-- Add this card after the Free Mode button -->
+<div class="card shadow-sm mt-3">
+    <div class="d-grid gap-2">
+        <button id="proxyToggleBtn" class="btn proxy-off">
+            <i class="fas fa-toggle-off"></i> Enable Proxy URLs
+        </button>
+    </div>
+</div>
     <!-- Result Message Display -->
     <div id="resultMessage" class="text-center mt-3"></div>
 
@@ -511,6 +526,60 @@
 
         // Call function on page load
         updateStorageStatus();
+        
+        
+        // Add to existing script
+document.getElementById("proxyToggleBtn").addEventListener("click", async function () {
+    const resultMessage = document.getElementById("resultMessage");
+    resultMessage.innerHTML = "";
+
+    try {
+        const response = await fetch("/toggle_proxy", { method: "POST" });
+        const result = await response.json();
+
+        if (response.ok) {
+            const currentState = result.enabled;
+            if (currentState) {
+                this.classList.remove("proxy-off");
+                this.classList.add("proxy-on");
+                this.innerHTML = `<i class="fas fa-toggle-on"></i> Disable Proxy URLs`;
+            } else {
+                this.classList.remove("proxy-on");
+                this.classList.add("proxy-off");
+                this.innerHTML = `<i class="fas fa-toggle-off"></i> Enable Proxy URLs`;
+            }
+            resultMessage.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+        } else {
+            resultMessage.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+        }
+    } catch (error) {
+        resultMessage.innerHTML = `<div class="alert alert-danger">Failed to toggle proxy. Please try again.</div>`;
+    }
+});
+
+// Initialize proxy state
+(async function initializeProxyState() {
+    try {
+        const response = await fetch("/proxy_status");
+        const result = await response.json();
+
+        if (response.ok) {
+            const button = document.getElementById("proxyToggleBtn");
+            const currentState = result.enabled;
+            if (currentState) {
+                button.classList.add("proxy-on");
+                button.classList.remove("proxy-off");
+                button.innerHTML = `<i class="fas fa-toggle-on"></i> Disable Proxy URLs`;
+            } else {
+                button.classList.add("proxy-off");
+                button.classList.remove("proxy-on");
+                button.innerHTML = `<i class="fas fa-toggle-off"></i> Enable Proxy URLs`;
+            }
+        }
+    } catch (error) {
+        console.error("Error initializing proxy state:", error);
+    }
+})();
     </script>
 </body>
 </html>
