@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file, flash, make_response, abort
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file, flash, make_response, abort, Response 
 import requests
 import json
 import os
@@ -9,7 +9,6 @@ import threading
 import string
 import random
 from contextlib import closing
-
 app = Flask(__name__)
 app.secret_key = '0d23caaa3479b02511e1af24744'  # Needed for session handling
 
@@ -32,6 +31,100 @@ GP_API_KEY = "96dc76c9be123d120f32a9b624c7682c14dae03e"
 KEY_API_URL = "https://severv1.onrender.com/mypassword/main_sever1/free/"
 TEMP_PAGES_FILE = "temp_pages.json"
 temp_pages_lock = threading.Lock()
+
+# Add these at the top with other constants
+PROXY_MAPPING_FILE = 'proxy_mappings.json'
+PROXY_STATUS_FILE = 'proxy_status.json'
+proxy_lock = threading.Lock()
+
+# Add these helper functions
+def load_proxy_mappings():
+    try:
+        with proxy_lock:
+            with open(PROXY_MAPPING_FILE, 'r') as f:
+                return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def save_proxy_mappings(mappings):
+    with proxy_lock:
+        with open(PROXY_MAPPING_FILE, 'w') as f:
+            json.dump(mappings, f, indent=4)
+
+def get_proxy_status():
+    try:
+        with open(PROXY_STATUS_FILE, 'r') as f:
+            return json.load(f).get('enabled', False)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+# Add new routes
+@app.route('/toggle_proxy', methods=['POST'])
+def toggle_proxy():
+    if 'admin_logged_in' not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    new_status = not get_proxy_status()
+    with open(PROXY_STATUS_FILE, 'w') as f:
+        json.dump({"enabled": new_status}, f)
+    
+    return jsonify({
+        "message": f"Proxy {'enabled' if new_status else 'disabled'}",
+        "enabled": new_status
+    })
+
+@app.route('/proxy_status', methods=['GET'])
+def proxy_status():
+    return jsonify({"enabled": get_proxy_status()})
+
+@app.route('/download/<proxy_id>')
+def proxy_download(proxy_id):
+    proxy_mappings = load_proxy_mappings()
+    file_id = next((k for k, v in proxy_mappings.items() if v == proxy_id), None)
+    
+    if not file_id:
+        abort(404)
+    
+    # Determine which token to use
+    if file_id.startswith("MARIO"):
+        actual_file_id = file_id[5:]
+        token_file = 'user_token2.json'
+    else:
+        actual_file_id = file_id
+        token_file = 'user_token.json'
+    
+    # Get actual OneDrive link with download parameter
+    direct_url = get_onedrive_business_link(actual_file_id, token_file)
+    if not direct_url:
+        abort(404)
+    
+    # Add download parameter if not present
+    if "?download=1" not in direct_url:
+        direct_url += "?download=1"
+    
+    # Stream the file
+    range_header = request.headers.get('Range', '')
+    headers = {'Range': range_header} if range_header else {}
+    
+    response = requests.get(direct_url, headers=headers, stream=True)
+    
+    # Create response with modified headers
+    resp_headers = dict(response.headers)
+    
+    # Force download behavior
+    filename = "video"  # You can extract from Content-Disposition if available
+    content_disp = resp_headers.get('Content-Disposition', '')
+    if 'filename=' in content_disp:
+        filename = content_disp.split('filename=')[1].strip('"')
+    
+    resp_headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return Response(
+        response.iter_content(chunk_size=8192),
+        status=response.status_code,
+        content_type=response.headers.get('Content-Type', 'application/octet-stream'),
+        headers=resp_headers
+    )
 
 def get_db():
     return sqlite3.connect(DATABASE)
@@ -822,21 +915,26 @@ def get_onedrive_business_link(file_id, token_file='user_token.json', retry_coun
 @app.route('/get_onedrive_link/<file_id>')
 @login_required
 def get_onedrive_link(file_id):
-    # Check if the file_id starts with "MARIO"
     if file_id.startswith("MARIO"):
-        actual_file_id = file_id[5:]  # Remove "MARIO" (5 characters)
+        actual_file_id = file_id[5:]
         token_file = 'user_token2.json'
     else:
         actual_file_id = file_id
         token_file = 'user_token.json'
     
-    # Generate the link with the correct token
-    link = get_onedrive_business_link(actual_file_id, token_file)
-    
-    if link:
-        return jsonify({"link": link})
+    if get_proxy_status():
+        proxy_mappings = load_proxy_mappings()
+        if actual_file_id not in proxy_mappings:
+            proxy_id = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            proxy_mappings[actual_file_id] = proxy_id
+            save_proxy_mappings(proxy_mappings)
+        
+        return jsonify({
+            "link": f"{request.host_url}download/{proxy_mappings[actual_file_id]}"
+        })
     else:
-        return jsonify({"error": "Unable to generate OneDrive link"}), 400
+        link = get_onedrive_business_link(actual_file_id, token_file)
+        return jsonify({"link": link}) if link else jsonify({"error": "Unable to generate link"}), 400
 
 
 def fetch_data_from_tmdb(imdb_id):
