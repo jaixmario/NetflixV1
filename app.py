@@ -31,42 +31,127 @@ GP_API_KEY = "96dc76c9be123d120f32a9b624c7682c14dae03e"
 KEY_API_URL = "https://severv1.onrender.com/mypassword/main_sever1/free/"
 TEMP_PAGES_FILE = "temp_pages.json"
 temp_pages_lock = threading.Lock()
-
+proxy_lock = threading.Lock()
 # Add these at the top with other constants
 PROXY_MAPPING_FILE = 'proxy_mappings.json'
 PROXY_STATUS_FILE = 'proxy_status.json'
-proxy_lock = threading.Lock()
 
+DATABASE = 'data.db'
+def init_db():
+    with closing(sqlite3.connect(DATABASE)) as conn:
+        cursor = conn.cursor()
+        # Create main tables
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS shows (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                imdb_id TEXT UNIQUE,
+                type TEXT,
+                name TEXT,
+                thumbnail TEXT,
+                rating REAL,
+                description TEXT,
+                year INTEGER,
+                trailer TEXT,
+                file_id TEXT,
+                quality TEXT,
+                date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS genres (
+                show_id INTEGER,
+                genre TEXT,
+                FOREIGN KEY(show_id) REFERENCES shows(id)
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS seasons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                show_id INTEGER,
+                season_number INTEGER,
+                episode_count INTEGER,
+                FOREIGN KEY(show_id) REFERENCES shows(id)
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS episodes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                season_id INTEGER,
+                episode_number INTEGER,
+                name TEXT,
+                description TEXT,
+                thumbnail TEXT,
+                air_date TEXT,
+                file_id TEXT,
+                rating REAL,
+                FOREIGN KEY(season_id) REFERENCES seasons(id)
+            )
+        ''')
+        # Proxy system tables
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS proxy_mappings (
+                file_id TEXT PRIMARY KEY,
+                proxy_id TEXT NOT NULL
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS proxy_status (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                enabled BOOLEAN NOT NULL DEFAULT FALSE
+            )
+        ''')
+        cursor.execute('INSERT OR IGNORE INTO proxy_status (id, enabled) VALUES (1, FALSE)')
+        conn.commit()
+
+init_db()
 # Add these helper functions
+def get_db():
+    return sqlite3.connect(DATABASE)
+
+def query_db(query, args=(), one=False):
+    with closing(get_db()) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(query, args)
+        rv = [dict(row) for row in cursor.fetchall()]
+        return (rv[0] if rv else None) if one else rv
+
+def insert_db(query, args=()):
+    with closing(get_db()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, args)
+        conn.commit()
+        return cursor.lastrowid
+
+# Proxy system functions
 def load_proxy_mappings():
-    try:
-        with proxy_lock:
-            with open(PROXY_MAPPING_FILE, 'r') as f:
-                return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+    with proxy_lock:
+        rows = query_db("SELECT file_id, proxy_id FROM proxy_mappings")
+        return {row['file_id']: row['proxy_id'] for row in rows}
 
 def save_proxy_mappings(mappings):
     with proxy_lock:
-        with open(PROXY_MAPPING_FILE, 'w') as f:
-            json.dump(mappings, f, indent=4)
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM proxy_mappings")
+        if mappings:
+            data = [(file_id, proxy_id) for file_id, proxy_id in mappings.items()]
+            cursor.executemany("INSERT INTO proxy_mappings (file_id, proxy_id) VALUES (?, ?)", data)
+        conn.commit()
+        conn.close()
 
 def get_proxy_status():
-    try:
-        with open(PROXY_STATUS_FILE, 'r') as f:
-            return json.load(f).get('enabled', False)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return False
+    row = query_db("SELECT enabled FROM proxy_status WHERE id = 1", one=True)
+    return bool(row['enabled']) if row else False
 
-# Add new routes
+# Proxy routes
 @app.route('/toggle_proxy', methods=['POST'])
 def toggle_proxy():
     if 'admin_logged_in' not in session:
         return jsonify({"message": "Unauthorized"}), 403
     
     new_status = not get_proxy_status()
-    with open(PROXY_STATUS_FILE, 'w') as f:
-        json.dump({"enabled": new_status}, f)
+    insert_db("UPDATE proxy_status SET enabled = ? WHERE id = 1", (new_status,))
     
     return jsonify({
         "message": f"Proxy {'enabled' if new_status else 'disabled'}",
