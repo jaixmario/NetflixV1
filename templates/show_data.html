@@ -351,11 +351,18 @@ $(document).ready(function() {
     };
 
     // Save Changes button handler
-    $('#saveButton').click(function() {
-        saveChanges(function() {
-            window.location.href = '/admin/home';
-        });
+    $('#saveButton').click(function(e) {
+    e.preventDefault(); // Prevent default form submission
+    saveChanges(function() {
+        $('#message').html('<div class="alert alert-success">Changes saved successfully!</div>');
+
+        // Auto-hide message after 2 seconds
+        setTimeout(function() {
+            $('#message .alert').fadeOut();
+            $('#advancedEditModal').modal('hide'); // Close modal after 2 seconds
+        }, 2000);
     });
+});
 
     // Auto-close modal after successful save
     $(document).on('ajax:success', function() {
