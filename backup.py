@@ -4,7 +4,7 @@ import os
 import json
 from datetime import datetime
 
-UPLOAD_INTERVAL = 10  # 1 hour
+UPLOAD_INTERVAL = 3600 # 1 hour
 BACKUP_FOLDER_ID = "01ZDEC6CXCKCNDJGM7X5EK33GFMY6DW5TL"  # OneDrive folder ID
 TOKEN_FILE = "user_token.json"  # Store the access token here
 
