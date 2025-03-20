@@ -185,6 +185,14 @@
     background-color: #dc3545 !important;
     border-color: #bb2d3b !important;
 }
+.metric-card {
+    background-color: #2d2d2d !important;
+    border: 1px solid #444;
+    transition: transform 0.2s;
+}
+.metric-card:hover {
+    transform: translateY(-3px);
+}
     </style>
 </head>
 <body>
@@ -317,9 +325,62 @@
         </button>
     </div>
 </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-gauge-high"></i> System Performance</h5>
+            <div class="row mt-3">
+                <div class="col-md-3 mb-3">
+                    <div class="metric-card bg-dark p-3 rounded">
+                        <div class="d-flex justify-content-between">
+                            <span>CPU Usage</span>
+                            <span id="cpuMetric">0%</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div id="cpuProgress" class="progress-bar bg-info" role="progressbar"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="metric-card bg-dark p-3 rounded">
+                        <div class="d-flex justify-content-between">
+                            <span>Memory Usage</span>
+                            <span id="memMetric">0%</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div id="memProgress" class="progress-bar bg-success" role="progressbar"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="metric-card bg-dark p-3 rounded">
+                        <div class="d-flex justify-content-between">
+                            <span>Upload Speed</span>
+                            <span id="uploadMetric">0 MB/s</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div id="uploadProgress" class="progress-bar bg-warning" role="progressbar"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="metric-card bg-dark p-3 rounded">
+                        <div class="d-flex justify-content-between">
+                            <span>Download Speed</span>
+                            <span id="downloadMetric">0 MB/s</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 8px;">
+                            <div id="downloadProgress" class="progress-bar bg-danger" role="progressbar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <canvas id="performanceChart" style="max-height: 250px;"></canvas>
+        </div>
+    </div>
     <!-- Result Message Display -->
     <div id="resultMessage" class="text-center mt-3"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -580,6 +641,115 @@ document.getElementById("proxyToggleBtn").addEventListener("click", async functi
         console.error("Error initializing proxy state:", error);
     }
 })();
+
+        // Performance Chart
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'CPU Usage (%)',
+                        data: [],
+                        borderColor: '#0dcaf0',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Memory Usage (%)',
+                        data: [],
+                        borderColor: '#198754',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Upload Speed (MB/s)',
+                        data: [],
+                        borderColor: '#ffc107',
+                        tension: 0.4,
+                        yAxisID: 'y-network'
+                    },
+                    {
+                        label: 'Download Speed (MB/s)',
+                        data: [],
+                        borderColor: '#dc3545',
+                        tension: 0.4,
+                        yAxisID: 'y-network'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#333' },
+                        title: { text: 'CPU/Memory %', color: '#fff' },
+                        ticks: { color: '#fff' }
+                    },
+                    'y-network': {
+                        position: 'right',
+                        title: { text: 'Network (MB/s)', color: '#fff' },
+                        grid: { drawOnChartArea: false, color: '#333' },
+                        ticks: { color: '#fff' }
+                    },
+                    x: { 
+                        grid: { color: '#333' },
+                        ticks: { color: '#fff' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                }
+            }
+        });
+
+        let maxNetworkSpeed = 1; // Initialize with minimum value to prevent division by zero
+
+        async function updatePerformanceMetrics() {
+            try {
+                const response = await fetch('/performance_metrics');
+                const data = await response.json();
+                
+                // Update metrics
+                document.getElementById('cpuMetric').textContent = `${data.cpu}%`;
+                document.getElementById('cpuProgress').style.width = `${data.cpu}%`;
+                document.getElementById('memMetric').textContent = `${data.memory}%`;
+                document.getElementById('memProgress').style.width = `${data.memory}%`;
+                
+                const uploadSpeed = data.network.upload;
+                const downloadSpeed = data.network.download;
+                document.getElementById('uploadMetric').textContent = `${uploadSpeed.toFixed(1)} MB/s`;
+                document.getElementById('downloadMetric').textContent = `${downloadSpeed.toFixed(1)} MB/s`;
+
+                // Update progress bars (dynamic scaling based on max speed)
+                maxNetworkSpeed = Math.max(maxNetworkSpeed, uploadSpeed, downloadSpeed);
+                document.getElementById('uploadProgress').style.width = 
+                    `${(uploadSpeed / maxNetworkSpeed * 100).toFixed(1)}%`;
+                document.getElementById('downloadProgress').style.width = 
+                    `${(downloadSpeed / maxNetworkSpeed * 100).toFixed(1)}%`;
+
+                // Update chart
+                const time = new Date().toLocaleTimeString();
+                if(chart.data.labels.length > 15) {
+                    chart.data.labels.shift();
+                    chart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+                chart.data.labels.push(time);
+                chart.data.datasets[0].data.push(data.cpu);
+                chart.data.datasets[1].data.push(data.memory);
+                chart.data.datasets[2].data.push(uploadSpeed);
+                chart.data.datasets[3].data.push(downloadSpeed);
+                chart.update();
+            } catch (error) {
+                console.error('Error fetching metrics:', error);
+            }
+        }
+
+        // Update every 2 seconds
+        setInterval(updatePerformanceMetrics, 2000);
+        updatePerformanceMetrics();
     </script>
 </body>
 </html>
