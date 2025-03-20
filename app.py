@@ -9,6 +9,8 @@ import threading
 import string
 import random
 from contextlib import closing
+import psutil
+
 app = Flask(__name__)
 app.secret_key = '0d23caaa3479b02511e1af24744'  # Needed for session handling
 
@@ -37,6 +39,43 @@ PROXY_MAPPING_FILE = 'proxy_mappings.json'
 PROXY_STATUS_FILE = 'proxy_status.json'
 
 DATABASE = 'data.db'
+
+last_net_io = None
+last_net_time = None
+
+@app.route('/performance_metrics')
+def performance_metrics():
+    global last_net_io, last_net_time
+    
+    # Get CPU and Memory usage
+    cpu_usage = psutil.cpu_percent()
+    memory_usage = psutil.virtual_memory().percent
+    
+    # Calculate network usage
+    net_io = psutil.net_io_counters()
+    current_time = datetime.now()
+    network_stats = {'upload': 0.0, 'download': 0.0}
+    
+    if last_net_io and last_net_time:
+        time_diff = (current_time - last_net_time).total_seconds()
+        if time_diff > 0:
+            upload = (net_io.bytes_sent - last_net_io.bytes_sent) / (1024 * 1024) / time_diff
+            download = (net_io.bytes_recv - last_net_io.bytes_recv) / (1024 * 1024) / time_diff
+            network_stats = {
+                'upload': max(0.0, upload),
+                'download': max(0.0, download)
+            }
+    
+    last_net_io = net_io
+    last_net_time = current_time
+
+    return jsonify({
+        'cpu': cpu_usage,
+        'memory': memory_usage,
+        'network': network_stats,
+        'timestamp': datetime.now().isoformat()
+    })
+    
 def init_db():
     with closing(sqlite3.connect(DATABASE)) as conn:
         cursor = conn.cursor()
@@ -1855,4 +1894,7 @@ def freemode_status():
         return jsonify({"freemode": "off"})
 
 if __name__ == '__main__':
+    # Initialize network metrics
+    last_net_io = psutil.net_io_counters()
+    last_net_time = datetime.now()
     app.run(host='0.0.0.0', port=5000, debug=True)
