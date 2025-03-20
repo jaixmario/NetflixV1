@@ -526,42 +526,6 @@ def replace_backup():
         print("Exception occurred:", e)
         return jsonify({"message": "An error occurred during the replacement process."}), 500
 
-UPLOAD_INTERVAL = 3600
-
-def upload_to_onedrive():
-    """Uploads data.db to the OneDrive backup folder with a timestamp every 10 minutes."""
-    while True:
-        time.sleep(UPLOAD_INTERVAL)
-
-        # Fetch a valid access token
-        access_token = get_valid_token()
-        if not access_token:
-            print("Error: Unable to get a valid access token.")
-            continue
-        
-        # Set OneDrive upload URL for the backup folder
-        backup_folder = '01ZDEC6CXCKCNDJGM7X5EK33GFMY6DW5TL'  # Replace with actual OneDrive folder ID
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"data{timestamp}.db"
-
-        upload_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{backup_folder}:/{filename}:/content"
-
-        # Read the data from data.db
-        with open('data.db', 'rb') as file_data:
-            headers = {
-                'Authorization': f'Bearer {access_token}',
-                'Content-Type': 'application/json'
-            }
-            response = requests.put(upload_url, headers=headers, data=file_data)
-
-        if response.status_code == 201:
-            print(f"{filename} uploaded successfully.")
-        else:
-            print(f"Error uploading {filename}: {response.status_code} - {response.text}")
-
-# Start the upload thread
-upload_thread = threading.Thread(target=upload_to_onedrive, daemon=True)
-upload_thread.start()
 
 @app.route('/update_temp', methods=['POST'])
 def update_temp():
