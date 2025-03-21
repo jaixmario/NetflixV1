@@ -42,9 +42,54 @@ DATABASE = 'data.db'
 
 last_net_io = None
 last_net_time = None
+# Add to constants section
+PERFORMANCE_METER_FILE = 'performance_meter.json'
 
+# Add routes
+@app.route('/toggle_performance_meter', methods=['POST'])
+def toggle_performance_meter():
+    if 'admin_logged_in' not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+    
+    try:
+        if not os.path.exists(PERFORMANCE_METER_FILE):
+            with open(PERFORMANCE_METER_FILE, 'w') as f:
+                json.dump({"enabled": False}, f)
+                
+        with open(PERFORMANCE_METER_FILE, 'r+') as f:
+            data = json.load(f)
+            new_status = not data.get('enabled', False)
+            data['enabled'] = new_status
+            f.seek(0)
+            json.dump(data, f)
+            f.truncate()
+            
+        return jsonify({
+            "message": f"Performance meter {'enabled' if new_status else 'disabled'}",
+            "enabled": new_status
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+@app.route('/performance_meter_status', methods=['GET'])
+def performance_meter_status():
+    try:
+        if not os.path.exists(PERFORMANCE_METER_FILE):
+            return jsonify({"enabled": False})
+            
+        with open(PERFORMANCE_METER_FILE, 'r') as f:
+            data = json.load(f)
+            return jsonify({"enabled": data.get('enabled', False)})
+    except:
+        return jsonify({"enabled": False})
+        
 @app.route('/performance_metrics')
 def performance_metrics():
+    # Check admin authentication
+    if 'admin_logged_in' not in session:
+        return jsonify({"error": "Unauthorized access"}), 403
+    
     global last_net_io, last_net_time
     
     # Get CPU and Memory usage
