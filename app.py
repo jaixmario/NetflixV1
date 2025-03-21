@@ -37,14 +37,39 @@ proxy_lock = threading.Lock()
 # Add these at the top with other constants
 PROXY_MAPPING_FILE = 'proxy_mappings.json'
 PROXY_STATUS_FILE = 'proxy_status.json'
-
-DATABASE = 'data.db'
+PERFORMANCE_METER_FILE = 'performance_meter.json'
 
 last_net_io = None
 last_net_time = None
 # Add to constants section
-PERFORMANCE_METER_FILE = 'performance_meter.json'
 
+@app.route('/upload_backup', methods=['POST'])
+def upload_backup():
+    if 'admin_logged_in' not in session:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    try:
+        access_token = get_valid_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Define the folder ID where you want to store the backup
+        folder_id = "01ZDEC6CXCKCNDJGM7X5EK33GFMY6DW5TL"
+
+        # Upload the file
+        file_path = "data.db"
+        file_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+        upload_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{file_name}:/content"
+
+        with open(file_path, "rb") as file_data:
+            response = requests.put(upload_url, headers=headers, data=file_data)
+
+        if response.status_code in [200, 201]:
+            return jsonify({"message": "Backup uploaded successfully!"})
+        else:
+            return jsonify({"message": "Failed to upload backup", "error": response.text}), response.status_code
+
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "error": str(e)}), 500
 # Add routes
 @app.route('/toggle_performance_meter', methods=['POST'])
 def toggle_performance_meter():
