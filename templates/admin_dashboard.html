@@ -319,6 +319,14 @@
             </button>
         </div>
     </div>
+    
+    <div class="card shadow-sm mt-3">
+    <div class="d-grid gap-2">
+        <button id="uploadBackupBtn" class="btn btn-primary">
+            <i class="fas fa-cloud-upload-alt"></i> Upload Backup to OneDrive
+        </button>
+    </div>
+</div>
 
     <div class="card shadow-sm mt-3">
         <div class="d-grid gap-2">
@@ -359,6 +367,7 @@
         </button>
     </div>
 </div>
+
 
 <div class="card shadow-sm mt-3" id="performanceMeterCard" style="display: none;">
     <div class="card-body">
@@ -885,6 +894,25 @@ document.getElementById("performanceToggleBtn").addEventListener("click", async 
         console.error("Error initializing performance state:", error);
     }
 })();
+
+document.getElementById("uploadBackupBtn").addEventListener("click", async function() {
+        const resultMessage = document.getElementById("resultMessage");
+        resultMessage.innerHTML = "";
+
+        try {
+            const response = await fetch("/upload_backup", { method: "POST" });
+            const result = await response.json();
+            
+            const alertType = response.ok ? "success" : "danger";
+            resultMessage.innerHTML = `
+                <div class="alert alert-${alertType}">${result.message}</div>
+            `;
+        } catch (error) {
+            resultMessage.innerHTML = `
+                <div class="alert alert-danger">Failed to upload backup</div>
+            `;
+        }
+    });
     </script>
 </body>
 </html>
