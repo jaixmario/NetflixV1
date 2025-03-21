@@ -203,6 +203,22 @@
     background-color: #dc3545 !important;
     border-color: #bb2d3b !important;
 }
+
+.metric-card {
+    background-color: #2d2d2d !important;
+    border: 1px solid #444;
+    transition: transform 0.2s;
+}
+.metric-card:hover {
+    transform: translateY(-3px);
+}
+.metric-card .h4 {
+    color: #e0e0e0;
+    font-size: 1.5rem;
+}
+.text-muted {
+    color: #8a8a8a !important;
+}
     </style>
 </head>
 <body>
@@ -344,58 +360,71 @@
     </div>
 </div>
 
-    <div class="card shadow-sm mt-3" id="performanceMeterCard" style="display: none;">
-        <div class="card-body">
-            <h5 class="card-title"><i class="fas fa-gauge-high"></i> System Performance</h5>
-            <div class="row mt-3">
-                <div class="col-md-3 mb-3">
-                    <div class="metric-card bg-dark p-3 rounded">
-                        <div class="d-flex justify-content-between">
-                            <span>CPU Usage</span>
-                            <span id="cpuMetric">0%</span>
-                        </div>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div id="cpuProgress" class="progress-bar bg-info" role="progressbar"></div>
-                        </div>
+<div class="card shadow-sm mt-3" id="performanceMeterCard" style="display: none;">
+    <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-gauge-high"></i> System Performance</h5>
+        
+        <!-- Vertical Metrics Layout -->
+        <div class="row g-0">  <!-- Remove gutters -->
+            <!-- CPU Usage -->
+            <div class="col-12 mb-3">
+                <div class="metric-card bg-dark p-3 rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>CPU Usage</span>
+                        <span id="cpuMetric" class="fw-medium">33.5%</span>
                     </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="metric-card bg-dark p-3 rounded">
-                        <div class="d-flex justify-content-between">
-                            <span>Memory Usage</span>
-                            <span id="memMetric">0%</span>
-                        </div>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div id="memProgress" class="progress-bar bg-success" role="progressbar"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="metric-card bg-dark p-3 rounded">
-                        <div class="d-flex justify-content-between">
-                            <span>Upload Speed</span>
-                            <span id="uploadMetric">0 MB/s</span>
-                        </div>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div id="uploadProgress" class="progress-bar bg-warning" role="progressbar"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="metric-card bg-dark p-3 rounded">
-                        <div class="d-flex justify-content-between">
-                            <span>Download Speed</span>
-                            <span id="downloadMetric">0 MB/s</span>
-                        </div>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div id="downloadProgress" class="progress-bar bg-danger" role="progressbar"></div>
-                        </div>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div id="cpuProgress" class="progress-bar bg-info" style="width: 33.5%"></div>
                     </div>
                 </div>
             </div>
-            <canvas id="performanceChart" style="max-height: 250px;"></canvas>
+
+            <!-- Memory Usage -->
+            <div class="col-12 mb-3">
+                <div class="metric-card bg-dark p-3 rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Memory Usage</span>
+                        <span id="memMetric" class="fw-medium">79.2%</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div id="memProgress" class="progress-bar bg-success" style="width: 79.2%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Speed -->
+            <div class="col-12 mb-3">
+                <div class="metric-card bg-dark p-3 rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Upload Speed</span>
+                        <span id="uploadMetric" class="fw-medium">0.0 MB/s</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div id="uploadProgress" class="progress-bar bg-warning" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download Speed -->
+            <div class="col-12 mb-3">
+                <div class="metric-card bg-dark p-3 rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Download Speed</span>
+                        <span id="downloadMetric" class="fw-medium">0.0 MB/s</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 8px;">
+                        <div id="downloadProgress" class="progress-bar bg-danger" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="mt-4">
+            <canvas id="performanceChart" style="max-height: 250px; width: 100%"></canvas>
         </div>
     </div>
+</div>
     
     <!-- Add after proxy toggle button -->
 
