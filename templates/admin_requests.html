@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Requests</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #7c3aed;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            background-color: #2c2c2c;
+            border-bottom: 1px solid #333;
+        }
+
+        .table th,
+        .table td {
+            color: #e0e0e0;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        }
+
+        .table thead {
+            background-color: #2b2b2b;
+        }
+
+        .status-pending {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            color: var(--success-color);
+            font-weight: 600;
+        }
+
+        .status-rejected {
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+
+        .btn-action {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .empty-state {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+
+        .toast {
+            background-color: #2c2c2c;
+            border: 1px solid #333;
+            color: #e0e0e0;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #2b2b2b;
+        }
+
+        .icon-sm {
+            font-size: 0.9em;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid py-5">
+    <div class="card shadow-lg">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="fas fa-tasks icon-sm"></i>Manage Content Requests</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="table table-dark table-bordered table-hover text-center align-middle">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Year</th>
+                            <th>Type</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests %}
+                            <tr>
+                                <td>{{ req.id }}</td>
+                                <td>{{ req.name }}</td>
+                                <td>{{ req.year }}</td>
+                                <td>{{ req.media_type }}</td>
+                                <td class="text-break">{{ req.email }}</td>
+                                <td class="status-{{ req.status }}">
+                                    <i class="fas 
+                                        {% if req.status == 'pending' %}fa-clock 
+                                        {% elif req.status == 'completed' %}fa-check-circle 
+                                        {% else %}fa-times-circle 
+                                        {% endif %}"></i>
+                                    {{ req.status|upper }}
+                                </td>
+                                <td>
+                                    {% if req.status == 'pending' %}
+                                        <form method="post" action="/admin/update_status" class="d-flex gap-2 justify-content-center">
+                                            <input type="hidden" name="request_id" value="{{ req.id }}">
+                                            <button type="submit" name="status" value="completed"
+                                                    class="btn btn-success btn-sm btn-action">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                            <button type="submit" name="status" value="rejected"
+                                                    class="btn btn-danger btn-sm btn-action">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Action taken</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <i class="fas fa-check-circle"></i>
+                                        <h4 class="mb-2">All Caught Up!</h4>
+                                        <p class="text-muted">No pending requests found. Well done!</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+                <div class="toast-header" style="background-color: {% if category == 'success' %}#2c3e50{% else %}#4a1c1c{% endif %};">
+                    <i class="fas 
+                        {% if category == 'success' %}fa-check-circle text-success 
+                        {% elif category == 'danger' %}fa-times-circle text-danger 
+                        {% else %}fa-info-circle text-primary 
+                        {% endif %} me-2"></i>
+                    <strong class="me-auto">{{ category|title }}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    {{ message }}
+                </div>
+            </div>
+        {% endfor %}
+    {% endwith %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize toasts
+    document.addEventListener('DOMContentLoaded', function() {
+        var toasts = document.querySelectorAll('.toast');
+        toasts.forEach(function(toastEl) {
+            var toast = new bootstrap.Toast(toastEl, {
+                autohide: true
+            });
+            toast.show();
+        });
+    });
+</script>
+</body>
+</html>

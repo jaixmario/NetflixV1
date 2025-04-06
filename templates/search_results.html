@@ -20,7 +20,7 @@
     <select id="type" name="type" required>
         <option value="">Select</option>
         <option value="movie">Movie</option>
-        <option value="web_series">Web Series</option>
+        <option value="web series">Web Series</option>
     </select>
 
     <label for="name">Name:</label>
@@ -143,6 +143,8 @@
         <div class="request-container">
             <button onclick="openRequestPopup()">Request Movie/Web Series</button>
         </div>
+        <!-- Hidden input to store the search query -->
+        <input type="hidden" id="hiddenQuery" value="{{ query }}">
     </div>
 {% endif %}
 
@@ -320,8 +322,17 @@
 }
     
     function openRequestPopup() {
-        document.getElementById('requestModal').style.display = 'block';
+    const hiddenQuery = document.getElementById('hiddenQuery');
+    if (hiddenQuery) {
+        let nameValue = hiddenQuery.value.trim();
+        if (nameValue.length > 30) {
+            nameValue = nameValue.substring(0, 30);
+        }
+        document.getElementById('name').value = nameValue;
+        updateCharacterCount('name', 30); // update char count visually
     }
+    document.getElementById('requestModal').style.display = 'block';
+}
 
     // Close the request form popup
     function closeRequestPopup() {
