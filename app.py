@@ -18,8 +18,7 @@ TMDB_API_KEY = '0d23caaa3479b02511e1af2047fb4744'
 BASE_URL = 'https://api.themoviedb.org/3'
 
 DATABASE = 'data.db'
-
-# Replace these with your Azure AD application details
+GRAPH_ENDPOINT = "https://graph.microsoft.com/v1.0"
 CLIENT_ID = '59790544-ca0c-4b77-b338-26ff9d1b676f'
 TENANT_ID = '0fd666e8-0b3d-41ea-a5ef-1c509130bd94'
 DEVICE_CODE_URL = f'https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/devicecode'
@@ -34,7 +33,6 @@ KEY_API_URL = "https://severv1.onrender.com/mypassword/main_sever1/free/"
 TEMP_PAGES_FILE = "temp_pages.json"
 temp_pages_lock = threading.Lock()
 proxy_lock = threading.Lock()
-# Add these at the top with other constants
 PROXY_MAPPING_FILE = 'proxy_mappings.json'
 PROXY_STATUS_FILE = 'proxy_status.json'
 PERFORMANCE_METER_FILE = 'performance_meter.json'
@@ -210,6 +208,19 @@ def init_db():
             )
         ''')
         cursor.execute('INSERT OR IGNORE INTO proxy_status (id, enabled) VALUES (1, FALSE)')
+
+        # Requests table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                year TEXT,
+                media_type TEXT,
+                email TEXT,
+                status TEXT DEFAULT 'pending'
+            )
+        ''')
+
         conn.commit()
 
 init_db()
@@ -1625,6 +1636,7 @@ def submit_report():
         app.logger.error(f"Report error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
         
+
 @app.route('/send_email', methods=['POST'])
 def send_email():
     try:
@@ -1633,116 +1645,166 @@ def send_email():
         
         # Extract data from the JSON request
         data = request.get_json()
-        recipient_email = data.get('recipient', 'N/A')  # Extract recipient's email
-        subject = data.get('subject', 'N/A')  # Extract subject
-        body = data.get('body', '')  # Extract body content
+        recipient_email = data.get('recipient', 'N/A')  # Requester's email
+        body = data.get('body', '') 
 
         # Parse body fields
-        parsed_fields = {field.split(":")[0].strip(): field.split(":")[1].strip() for field in body.split("\n") if ":" in field}
+        parsed_fields = {field.split(":")[0].strip(): field.split(":")[1].strip() 
+                        for field in body.split("\n") if ":" in field}
 
-        # Extract individual fields with fallback to "N/A"
+        # Extract individual fields
         email_type = parsed_fields.get("Type", "N/A")
         name = parsed_fields.get("Name", "N/A")
         year = parsed_fields.get("Year", "N/A")
         comments = parsed_fields.get("Comments", "N/A")
-        
-        # Fixed recipient for email delivery
-        recipient = "Mario22623@gmail.com"  
 
-        if not subject or not body or not recipient_email:
+        # Validate required fields
+        if not body or not recipient_email:
             return jsonify({"error": "Missing required fields"}), 400
 
-        # Build the HTML email content
-        email_body = f"""
-<html>
-    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f3f4f6; padding: 20px;">
-            <tr>
-                <td align="center">
-                    <!-- Main Email Container -->
-                    <table width="600px" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); padding: 20px; max-width: 600px; width: 100%; border: 1px solid #e0e0e0;">
-                        <!-- Header -->
-                        <tr>
-                            <td style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0;">
-                                <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">{subject}</h1>
-                            </td>
-                        </tr>
-                        <!-- Content Section -->
-                        <tr>
-                            <td style="padding: 20px 0;">
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <!-- Type -->
-                                    <tr>
-                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
-                                            <strong>Type:</strong> {email_type}
-                                        </td>
-                                    </tr>
-                                    <!-- Name -->
-                                    <tr>
-                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
-                                            <strong>Name:</strong> {name}
-                                        </td>
-                                    </tr>
-                                    <!-- Year -->
-                                    <tr>
-                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
-                                            <strong>Year:</strong> {year}
-                                        </td>
-                                    </tr>
-                                    <!-- Email -->
-                                    <tr>
-                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
-                                            <strong>Email:</strong> {recipient_email}
-                                        </td>
-                                    </tr>
-                                    <!-- Comment -->
-                                    <tr>
-                                        <td style="padding: 10px 0; font-size: 16px; color: #2c3e50;">
-                                            <strong>Comment:</strong> {comments}
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <!-- Footer -->
-                        <tr>
-                                <p style="margin: 5px 0;">&copy; 2024 MARIO. All rights reserved.</p>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </body>
-</html>
-        """
+        # Store request in database
+        with sqlite3.connect('data.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO requests (name, year, media_type, email)
+                VALUES (?, ?, ?, ?)
+            ''', (name, year, email_type, recipient_email))
+            conn.commit()
 
-        # Set up the Microsoft Graph API endpoint
+        # Email configurations
+        admin_email = "Mario22623@gmail.com"
         url = "https://graph.microsoft.com/v1.0/me/sendMail"
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
         }
-        email_data = {
+
+        # User Confirmation Email
+        user_email_body = f"""
+<html>
+  <body style="margin: 0; padding: 0; background-color: #141414; font-family: Arial, sans-serif;">
+    <div style="width: 100%; display: flex; justify-content: center; padding: 40px 0;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #1c1c1c; border: 1px solid #e50914; color: #ffffff; border-radius: 0;">
+        <tr>
+          <td style="padding: 20px 30px; text-align: center; border-bottom: 1px solid #e50914;">
+            <h2 style="color: #e50914; font-size: 24px; margin: 0;">REQUEST RECEIVED</h2>
+            <p style="margin-top: 5px; font-size: 14px; color: #aaa;">Your request has been logged in AuroraFlix</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 30px;">
+            <p style="margin-bottom: 15px;">Hello,</p>
+            <p>We’ve received your request for the <strong>{email_type}</strong> "<span style="color: #e50914;">{name} ({year})</span>".</p>
+            <p style="margin-top: 20px; color: #ccc;">Here are the details:</p>
+            <table width="100%" cellpadding="8" cellspacing="0" style="margin-top: 10px;">
+              <tr>
+                <td style="width: 100px; color: #999; font-weight: bold;">Type:</td>
+                <td style="color: #fff;">{email_type}</td>
+              </tr>
+              <tr>
+                <td style="color: #999; font-weight: bold;">Year:</td>
+                <td style="color: #fff;">{year}</td>
+              </tr>
+              <tr>
+                <td style="color: #999; font-weight: bold;">Comment:</td>
+                <td style="color: #fff;">{comments}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="text-align: center; padding: 20px; border-top: 1px solid #e50914;">
+            <p style="font-size: 12px; color: #888; margin: 0;">This is an automated email from <strong>AuroraFlix</strong></p>
+            <p style="font-size: 12px; color: #444; margin: 5px 0 0;">&copy; 2024 AuroraFlix</p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>
+"""
+
+        # Admin Notification Email
+        admin_email_body = f"""
+<html>
+  <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #121212; color: #ffffff;">
+    <h2 style="color: #00ff00;">New Content Report</h2>
+    <table width="100%" cellpadding="10" cellspacing="0" border="0" style="border-collapse: collapse; background-color: #1e1e1e; border: 1px solid #333;">
+      <tr>
+        <td style="border: 1px solid #333;"><strong>Content Type:</strong></td>
+        <td style="border: 1px solid #333;">{email_type}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #333;"><strong>Name:</strong></td>
+        <td style="border: 1px solid #333;">{name}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #333;"><strong>Year:</strong></td>
+        <td style="border: 1px solid #333;">{year}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #333;"><strong>Email:</strong></td>
+        <td style="border: 1px solid #333;">{recipient_email}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #333;"><strong>Comments:</strong></td>
+        <td style="border: 1px solid #333;">{comments}</td>
+      </tr>
+    </table>
+    <p style="margin-top: 20px; font-size: 12px; color: #aaa;">&copy; 2024 AuroraFlix | Auto Notification</p>
+  </body>
+</html>
+"""
+        # Send both emails
+        email_responses = []
+        
+        # Send user confirmation
+        user_email_data = {
             "message": {
-                "subject": subject,
-                "body": {"contentType": "HTML", "content": email_body},
-                "toRecipients": [{"emailAddress": {"address": recipient}}],
+                "subject": "Your Request Submission Confirmation",
+                "body": {"contentType": "HTML", "content": user_email_body},
+                "toRecipients": [{"emailAddress": {"address": recipient_email}}],
             },
             "saveToSentItems": "true",
         }
+        user_response = requests.post(url, headers=headers, json=user_email_data)
+        email_responses.append(("User", user_response))
 
-        # Send the email via a POST request
-        response = requests.post(url, headers=headers, json=email_data)
-        if response.status_code == 202:
-            return jsonify({"message": "Email sent successfully!"}), 200
-        else:
-            print(f"Failed to send email: {response.status_code} - {response.text}")
-            return jsonify({"error": "Failed to send email"}), 400
+        # Send admin notification
+        admin_email_data = {
+            "message": {
+                "subject": f"New Request: {email_type} - {name}",
+                "body": {"contentType": "HTML", "content": admin_email_body},
+                "toRecipients": [{"emailAddress": {"address": admin_email}}],
+            },
+            "saveToSentItems": "true",
+        }
+        admin_response = requests.post(url, headers=headers, json=admin_email_data)
+        email_responses.append(("Admin", admin_response))
+
+        # Check responses
+        errors = []
+        for recipient, response in email_responses:
+            if response.status_code != 202:
+                errors.append(f"Failed to send {recipient} email: {response.text}")
+
+        if errors:
+            return jsonify({
+                "message": "Partial success with some email failures",
+                "errors": errors
+            }), 207
+
+        return jsonify({"message": "Both emails sent successfully!"}), 200
+
+    except sqlite3.Error as db_error:
+        print("Database error:", db_error)
+        return jsonify({"error": "Database operation failed"}), 500
+        
     except Exception as e:
         print("Exception occurred:", e)
-        return jsonify({"error": "An error occurred while sending the email"}), 500
-# Admin logout route
+        return jsonify({"error": "An error occurred while processing the request"}), 500
+
+
 @app.route('/admin/logout')
 def admin_logout():
     # Log out the admin and clear the session
@@ -1950,6 +2012,170 @@ def toggle_freemode():
 
     except Exception as e:
         return jsonify({"message": f"Error: {str(e)}"}), 500
+
+
+
+# Admin Routes
+@app.route('/admin/requests')
+def admin_requests():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+    
+    with sqlite3.connect('data.db') as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM requests WHERE status = ? ORDER BY id DESC', ('pending',))
+        requests = cursor.fetchall()
+    
+    return render_template('admin_requests.html', requests=requests)
+
+@app.route('/admin/update_status', methods=['POST'])
+def update_status():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('admin_login'))
+
+    request_id = request.form.get('request_id')
+    new_status = request.form.get('status')
+    
+    try:
+        with sqlite3.connect('data.db') as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE requests 
+                SET status = ?
+                WHERE id = ?
+            ''', (new_status, request_id))
+            
+            if new_status == 'completed':
+                cursor.execute('''
+                    SELECT name, year, media_type, email 
+                    FROM requests 
+                    WHERE id = ?
+                ''', (request_id,))
+                req = cursor.fetchone()
+                
+                if req:
+                    access_token = get_valid_token()
+                    if not access_token:
+                        flash('Failed to get access token', 'error')
+                        return redirect(url_for('admin_requests'))
+                    
+                    send_email1(
+                        access_token=access_token,
+                        to_email=req['email'],
+                        name=req['name'],
+                        year=req['year'],
+                        media_type=req['media_type']
+                    )
+                    flash('Status updated and confirmation email sent!', 'success')
+                else:
+                    flash('Request not found!', 'error')
+            else:
+                flash('Status updated successfully!', 'success')
+            
+            conn.commit()
+            
+    except Exception as e:
+        print(f"Error updating status: {str(e)}")
+        flash('Error updating status', 'error')
+    
+    return redirect(url_for('admin_requests'))
+
+def send_email1(access_token, to_email, name, year, media_type):
+    subject = "Your Request Has Been Successfully Added"
+    
+    html_body = f"""
+<html style="background-color:#000;">
+<head>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    .icon {{
+      width: 20px;
+      height: 20px;
+      vertical-align: middle;
+      margin-right: 8px;
+    }}
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#000; font-family:'Inter', sans-serif; color:#fff;">
+  <table align="center" width="100%" cellpadding="0" cellspacing="0" style="padding: 0; background-color:#000;">
+    <tr>
+      <td>
+        <table align="center" width="600" cellpadding="0" cellspacing="0" style="background-color:#141414; padding: 0; border: 2px solid #e50914;">
+          <tr>
+            <td style="text-align:center; padding: 40px 30px 10px;">
+              <h2 style="font-size:24px; color:#e50914; margin:0; letter-spacing: 0.5px;">
+                <svg class="icon" fill="#e50914" viewBox="0 0 20 20"><path d="M7.629 13.918L3.08 9.369l1.41-1.41 3.14 3.14 7.88-7.88 1.41 1.41z"/></svg>
+                REQUEST ADDED
+              </h2>
+              <p style="font-size:14px; color:#bbb; margin-top:6px;">
+                <svg class="icon" fill="#bbb" viewBox="0 0 20 20"><path d="M2 4.5A2.5 2.5 0 014.5 2h11A2.5 2.5 0 0118 4.5v11a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 012 15.5v-11zM4 4v12h12V4H4z"/></svg>
+                Your content is now available on AuroraFlix
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 30px 0; font-size:15px; line-height:1.6;">
+              <p>Hello,</p>
+              <p>
+                We're excited to inform you that your request for the <strong>{media_type}</strong> 
+                <span style="color:#e50914;">"{name} ({year})"</span> has been successfully added to our platform.
+              </p>
+              <p>You can begin watching it right away at the link below:</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 30px 0;">
+              <a href="https://auroraflix.onrender.com" target="_blank" 
+                 style="display:inline-block; background-color:#e50914; color:#fff; font-weight:600; text-decoration:none; padding:14px 32px; border: none; font-size:15px; text-transform:uppercase;">
+                <svg class="icon" fill="#fff" viewBox="0 0 20 20" style="margin-right:8px;"><path d="M4 4l12 6-12 6z"/></svg>
+                Watch Now
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 30px 40px; font-size:15px; color:#bbb;">
+              <p>Thank you for choosing <strong style="color:#fff;">AuroraFlix</strong>.</p>
+              <p>Enjoy your viewing!</p>
+              <br>
+              <p style="color:#666; font-size:13px;">– AuroraFlix Team</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    email_msg = {
+        "message": {
+            "subject": subject,
+            "body": {
+                "contentType": "HTML",
+                "content": html_body
+            },
+            "toRecipients": [
+                {
+                    "emailAddress": {
+                        "address": to_email
+                    }
+                }
+            ]
+        }
+    }
+
+    response = requests.post(f"{GRAPH_ENDPOINT}/me/sendMail", headers=headers, json=email_msg)
+    return response.status_code == 202
+
 
 @app.route('/freemode_status', methods=['GET'])
 def freemode_status():
