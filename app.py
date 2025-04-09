@@ -10,8 +10,11 @@ import string
 import random
 from contextlib import closing
 import psutil
+from flask_cors import cross_origin
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = '0d23caaa3479b02511e1af24744'  # Needed for session handling
 
 TMDB_API_KEY = '0d23caaa3479b02511e1af2047fb4744'
@@ -42,6 +45,7 @@ last_net_time = None
 # Add to constants section
 
 @app.route('/api/top5', methods=['GET'])
+@cross_origin()
 def api_top5():
     try:
         # Query the 5 most recently added shows
