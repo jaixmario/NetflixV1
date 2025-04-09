@@ -41,6 +41,37 @@ last_net_io = None
 last_net_time = None
 # Add to constants section
 
+@app.route('/api/top5', methods=['GET'])
+def api_top5():
+    try:
+        # Query the 5 most recently added shows
+        shows = query_db("""
+            SELECT imdb_id, name, thumbnail, year, rating, description, type, quality
+            FROM shows 
+            ORDER BY date_added DESC 
+            LIMIT 5
+        """)
+        
+        # Convert to list of dictionaries and format
+        result = []
+        for show in shows:
+            result.append({
+                "imdb_id": show['imdb_id'],
+                "title": show['name'],
+                "thumbnail": show['thumbnail'],
+                "year": show['year'],
+                "rating": show['rating'],
+                "description": show['description'],
+                "type": show['type'],
+                "quality": show['quality']
+            })
+            
+        return jsonify(result)
+    
+    except Exception as e:
+        app.logger.error(f"Error in /api/top5: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.route('/upload_backup', methods=['POST'])
 def upload_backup():
     if 'admin_logged_in' not in session:
