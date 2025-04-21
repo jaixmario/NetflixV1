@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file, flash, make_response, abort, Response 
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, send_file, flash, make_response, abort, Response, send_from_directory
 import requests
 import json
 import os
@@ -43,6 +43,10 @@ PERFORMANCE_METER_FILE = 'performance_meter.json'
 last_net_io = None
 last_net_time = None
 # Add to constants section
+
+@app.route('/.well-known/discord')
+def serve_discord_verification():
+    return send_from_directory('.well-known', 'discord')
 
 @app.route('/api/top5', methods=['GET'])
 @cross_origin()
